@@ -94,6 +94,15 @@ only so the page works without a server.
 **Deploy:** a `Dockerfile` and `render.yaml` are included for a free one-click
 deploy on Render.
 
+## Optional AI fallback
+
+The rules run first, every time. When a message has no keyword match and lands in
+"General", each such card gets a **Re-check with AI** button that calls a tiny
+serverless function (`api/ai.js`) to get a best-effort category, priority and
+first step, labelled "AI-assisted". The key lives only in the `NVIDIA_API_KEY`
+environment variable (Vercel project settings); without it the button reports it
+is not enabled and the rule-based output is unchanged.
+
 ## Running the tests
 
 ```bash

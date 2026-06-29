@@ -73,6 +73,7 @@
   .tag::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.85}
   .tag.high{background:var(--high-bg);color:var(--high-ink)} .tag.medium{background:var(--med-bg);color:var(--med-ink)} .tag.low{background:var(--low-bg);color:var(--low-ink)}
   .chip{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);border:1px solid var(--hairline);border-radius:5px;padding:3px 8px;white-space:nowrap}
+  .chip.aichip{border-color:#cfe0da;color:var(--accent)}
   .tid{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-mute)}
 
   .results{min-height:320px}
@@ -296,11 +297,11 @@ function resultsHTML(){
 function cardHTML(t,base,lead,delay){
   const breach=breachText(base,SLA_HOURS[t.priority]);
   return `<article class="card ${lead?'lead '+tagClass(t.priority):''} enter" style="animation-delay:${delay}ms">
-    <div class="meta"><span class="tag ${tagClass(t.priority)}">${tagText(t.priority)}</span><span class="chip">${esc(t.category)}</span><span class="tid">${t.id}</span></div>
+    <div class="meta"><span class="tag ${tagClass(t.priority)}">${tagText(t.priority)}</span><span class="chip">${esc(t.category)}</span><span class="tid">${t.id}</span>${t.ai?'<span class="chip aichip">AI-assisted</span>':''}</div>
     <p class="summary">${esc(t.summary)}</p>
     <div class="rowline"><span><span class="k">route</span> ${esc(t.team)}</span><span><span class="k">SLA</span> ${SLA_HOURS[t.priority]}h · breaches ${breach}</span></div>
     <p class="step"><span class="sl">First step</span>${esc(t.first_step)}</p>
-    <div class="cardact"><button class="btn btn-ghost reply" data-id="${t.id}">Copy first response</button></div>
+    <div class="cardact"><button class="btn btn-ghost reply" data-id="${t.id}">Copy first response</button>${(t.category==="General"&&!t.ai)?`<button class="btn btn-ghost airecheck" data-id="${t.id}" style="margin-left:8px">Re-check with AI</button>`:""}</div>
   </article>`;
 }
 function wireTriage(){
@@ -320,6 +321,20 @@ function wireTriage(){
       const t=state.tickets.find(x=>x.id===b.dataset.id);
       await navigator.clipboard.writeText(firstResponse(t,base));
       b.textContent="Copied reply"; setTimeout(()=>b.textContent="Copy first response",1400);
+    }));
+    results.querySelectorAll(".airecheck").forEach(b=>b.addEventListener("click",async()=>{
+      const t=state.tickets.find(x=>x.id===b.dataset.id); if(!t)return;
+      b.textContent="Asking AI…";
+      try{
+        const r=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({input:t.raw_message})});
+        if(!r.ok) throw 0; const d=await r.json();
+        t.category=d.category||t.category;
+        t.priority=["High","Medium","Low"].includes(d.priority)?d.priority:t.priority;
+        t.first_step=d.first_step||t.first_step;
+        t.team=ROUTING[t.category]||ROUTING.General; t.ai=true;
+        state.tickets.sort((a,c)=>ORDER[a.priority]-ORDER[c.priority]);
+        results.innerHTML=resultsHTML(); wireResults();
+      }catch(e){ b.textContent="AI not enabled"; }
     }));
   }
 }
