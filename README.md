@@ -53,8 +53,25 @@ python -m ticket_triage.cli --file samples/messages.txt --json
 
 ## The web UI (Triage Desk)
 
-There is a small web interface for pasting a noisy inbox and seeing it sorted,
-with the single most urgent ticket called out as "Handle first".
+**Live: https://ticket-triage-nu.vercel.app/**
+
+A multi-view web interface for pasting a noisy inbox and seeing it sorted, with
+the single most urgent ticket called out as "Handle first". Beyond sorting, each
+ticket arrives action-ready:
+
+- **Routing** — every category maps to the team that owns it (POS, Network,
+  Microsoft 365, Identity & Access, Security, and so on).
+- **SLA countdown** — a triage-time picker drives a per-ticket breach time
+  (High 4h, Medium 8h, Low 3 days).
+- **First-response reply** — one click copies a ready user-facing
+  acknowledgement email for that ticket.
+- **Major-incident detector** — three or more tickets in one category in a batch
+  raises a banner before you work them one by one.
+- **CSV export** — download the whole triaged batch for Jira, ServiceNow or a
+  spreadsheet.
+- A **Reference** tab documents the priority rules, routing table and logic.
+
+Navigation collapses to a hamburger menu on small screens.
 
 **Run it with the real Python engine behind it:**
 
