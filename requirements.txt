@@ -1,0 +1,4 @@
+# The core ticket_triage package and CLI need only the standard library.
+# These are needed only to run the optional web server (web/server.py).
+fastapi>=0.110
+uvicorn[standard]>=0.29
