@@ -1,5 +1,7 @@
 # ticket-triage
 
+**Live demo: https://ticket-triage-nu.vercel.app/**
+
 A small, rule-based tool that turns raw support messages into structured,
 prioritised tickets.
 
