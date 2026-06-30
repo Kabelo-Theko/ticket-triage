@@ -76,6 +76,9 @@
   .tag.high{background:var(--high-bg);color:var(--high-ink)} .tag.medium{background:var(--med-bg);color:var(--med-ink)} .tag.low{background:var(--low-bg);color:var(--low-ink)}
   .chip{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);border:1px solid var(--hairline);border-radius:5px;padding:3px 8px;white-space:nowrap}
   .chip.aichip{border-color:#cfe0da;color:var(--accent)}
+  .briefcard{margin-bottom:18px;border-left:3px solid var(--accent)}
+  .briefbody{font-size:14px;color:var(--ink-soft);line-height:1.65;margin:8px 0 0}
+  @media (max-width:560px){ h1{font-size:30px} table.ref{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch} .tally .actions{margin-left:0;width:100%} }
   .tid{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-mute)}
 
   .results{min-height:320px}
@@ -290,8 +293,9 @@ function resultsHTML(){
     <span class="count"><span class="tag high">High</span><b>${counts.High}</b></span>
     <span class="count"><span class="tag medium">Med</span><b>${counts.Medium}</b></span>
     <span class="count"><span class="tag low">Low</span><b>${counts.Low}</b></span>
-    <span class="actions"><button class="btn btn-ghost" id="goexport">Export</button></span>
-  </div>`;
+    <span class="actions"><button class="btn btn-ghost" id="brief">AI queue brief</button><button class="btn btn-ghost" id="goexport">Export</button></span>
+  </div>
+  <div id="briefout"></div>`;
   if(mi.length){html+=`<div class="mi-banner"><b>Possible major incident:</b> ${mi.map(([c,n])=>`${n} tickets in ${esc(c)}`).join(", ")}. Consider opening a major incident before working these one by one.</div>`;}
   const lead=state.tickets[0], rest=state.tickets.slice(1);
   html+=`<p class="leadlabel">${lead.priority==="High"?"Handle first":"Top of the queue"}</p>`+cardHTML(lead,base,true,30);
@@ -320,6 +324,17 @@ function wireTriage(){
   function wireResults(){
     const s2=$("#sample2"); if(s2)s2.addEventListener("click",loadSample);
     const ge=$("#goexport"); if(ge)ge.addEventListener("click",()=>setView("export"));
+    const bf=$("#brief"); if(bf)bf.addEventListener("click",async()=>{
+      const bo=$("#briefout"); bf.textContent="Briefing…";
+      try{
+        const tk=state.tickets.map(t=>({priority:t.priority,category:t.category,summary:t.summary}));
+        const r=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({task:"brief",tickets:tk,model:($("#aimodel")?.value||"flash")})});
+        if(!r.ok) throw 0; const d=await r.json();
+        bo.innerHTML=`<div class="card briefcard"><div class="meta"><span class="chip aichip">AI queue brief</span></div><p class="briefbody">${esc(d.brief||"").replace(/\n/g,"<br>")}</p><div class="cardact"><button class="btn btn-ghost" id="copybrief">Copy brief</button></div></div>`;
+        bf.textContent="AI queue brief";
+        const cb=$("#copybrief"); if(cb)cb.addEventListener("click",async()=>{await navigator.clipboard.writeText(d.brief||"");cb.textContent="Copied";setTimeout(()=>cb.textContent="Copy brief",1400);});
+      }catch(e){ bf.textContent="AI queue brief"; bo.innerHTML=`<div class="card"><p class="briefbody" style="color:var(--ink-mute)">The AI queue brief needs the AI backend (set NVIDIA_API_KEY in Vercel). Your triaged queue below works without it.</p></div>`; }
+    });
     const base=triageBase();
     results.querySelectorAll(".reply").forEach(b=>b.addEventListener("click",async()=>{
       const t=state.tickets.find(x=>x.id===b.dataset.id);
