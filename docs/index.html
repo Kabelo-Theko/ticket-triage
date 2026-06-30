@@ -57,6 +57,8 @@
   textarea:focus{outline:2px solid var(--accent);outline-offset:2px;border-color:transparent}
   label.fld{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin:14px 0 5px}
   input[type=time]{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--ink);background:#fcfbf8;border:1px solid var(--hairline);border-radius:9px;padding:9px 11px}
+  select.aimodel{width:100%;font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--ink);background:#fcfbf8;border:1px solid var(--hairline);border-radius:9px;padding:9px 11px}
+  select.aimodel:focus{outline:2px solid var(--accent);outline-offset:2px}
   .row-btns{display:flex;gap:9px;margin-top:13px;flex-wrap:wrap}
   button.btn{font-family:"IBM Plex Sans",sans-serif;font-size:14px;font-weight:600;border-radius:9px;padding:11px 16px;cursor:pointer;border:1px solid transparent;transition:background var(--motion),border-color var(--motion)}
   button.btn:active{transform:translateY(1px)}
@@ -258,6 +260,8 @@ i forgot my password again
 outlook keeps saying it can't send"></textarea>
       <label class="fld" for="ttime">Triage time (for SLA countdown)</label>
       <input type="time" id="ttime" value="${now}" />
+      <label class="fld" for="aimodel">AI model · for "Re-check with AI"</label>
+      <select class="aimodel" id="aimodel"><option value="flash">DeepSeek Flash</option><option value="pro">DeepSeek Pro</option><option value="minimax">MiniMax M3</option></select>
       <div class="row-btns">
         <button class="btn btn-primary" id="run">Triage queue</button>
         <button class="btn btn-ghost" id="sample">Load sample</button>
@@ -326,7 +330,7 @@ function wireTriage(){
       const t=state.tickets.find(x=>x.id===b.dataset.id); if(!t)return;
       b.textContent="Asking AI…";
       try{
-        const r=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({input:t.raw_message})});
+        const r=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({input:t.raw_message,model:($("#aimodel")?.value||"flash")})});
         if(!r.ok) throw 0; const d=await r.json();
         t.category=d.category||t.category;
         t.priority=["High","Medium","Low"].includes(d.priority)?d.priority:t.priority;
