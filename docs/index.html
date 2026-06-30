@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Triage Desk — first-line support triage</title>
+<title>Triage Desk: first-line support triage</title>
 <meta name="description" content="Paste a noisy support inbox. Get it sorted by what to handle first, with routing, SLA and a ready reply." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -65,7 +65,7 @@
   button.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .btn-primary{background:var(--accent);color:#fff}
   .btn-primary:hover{background:var(--accent-press)}
-  .btn-ghost{background:transparent;color:var(--ink-soft);border-color:var(--hairline)}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border-color:var(--hairline);text-decoration:none;display:inline-flex;align-items:center;font-family:"IBM Plex Sans",sans-serif;font-size:14px;font-weight:600;border-radius:9px;padding:11px 16px;cursor:pointer;border:1px solid var(--hairline);transition:background var(--motion),border-color var(--motion)}
   .btn-ghost:hover{border-color:var(--ink-mute);color:var(--ink)}
   .legend{margin-top:18px;border-top:1px solid var(--hairline);padding-top:16px}
   .legend .lh{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin-bottom:10px}
@@ -88,6 +88,7 @@
   .tally .actions{margin-left:auto;display:flex;gap:8px}
   .mi-banner{background:var(--high-bg);border:1px solid #e8c4bc;border-left:3px solid var(--high-rule);border-radius:var(--radius);padding:13px 16px;margin-bottom:18px;font-size:14px;color:var(--ink)}
   .mi-banner b{color:var(--high-ink)}
+  .mi-site{border-left:5px solid #8b0000;background:#f9e0db}
   .leadlabel{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--high-rule);margin:0 0 9px}
   .card{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;margin-bottom:12px;position:relative}
   .card .meta{display:flex;align-items:center;gap:10px;margin-bottom:9px;flex-wrap:wrap}
@@ -96,7 +97,7 @@
   .card .rowline .k{color:var(--ink-mute)}
   .card .step{font-size:13.5px;color:var(--ink-soft);margin:11px 0 0;padding-top:11px;border-top:1px dashed var(--hairline)}
   .card .step .sl{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-mute);display:block;margin-bottom:3px}
-  .card .cardact{margin-top:12px}
+  .card .cardact{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .lead{border-left:4px solid var(--high-rule);padding:22px 24px}
   .lead.medium{border-left-color:var(--med-rule)} .lead.low{border-left-color:var(--low-rule)}
   .lead .summary{font-family:"Space Grotesk",sans-serif;font-size:20px;font-weight:600;letter-spacing:-.01em;line-height:1.25}
@@ -120,6 +121,9 @@
   footer{border-top:1px solid var(--hairline);padding:22px 0 40px;color:var(--ink-mute);font-size:12.5px;display:flex;gap:16px;flex-wrap:wrap}
   footer a{color:var(--ink-soft);text-decoration:none;border-bottom:1px solid var(--hairline)}
   .src-note{font-family:"IBM Plex Mono",monospace}
+
+  /* Feature 5: reasoning receipt */
+  .receipt{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-mute);margin:6px 0 0;line-height:1.5}
 </style>
 </head>
 <body>
@@ -153,6 +157,9 @@
 </div>
 
 <script>
+/* ---- Feature 1: store list ---- */
+const STORES=["Sandton City","Mall of Africa","Menlyn Park","Gateway","Canal Walk","V&A Waterfront","Eastgate","Pavilion"];
+
 /* ---- classification (mirrors ticket_triage/classifier.py) ---- */
 const CATEGORY_SIGNALS = [
   ["Security", ["virus","malware","phishing","suspicious link","suspicious email","hacked","ransomware"]],
@@ -179,7 +186,7 @@ const FIRST_STEPS = {
 };
 /* routing + SLA */
 const ROUTING = {
-  "Security":"Security Team — escalate immediately",
+  "Security":"Security Team: escalate immediately",
   "Account & Access":"Identity & Access Team",
   "Point of Sale":"Retail Systems / POS Support",
   "Printer":"Hardware / Field Support",
@@ -196,10 +203,22 @@ const norm = t => t.trim().toLowerCase().replace(/\s+/g," ");
 function matchCategory(t){for(const [c,sigs] of CATEGORY_SIGNALS){if(sigs.some(s=>t.includes(s)))return c;}return "General";}
 function matchPriority(t){if(HIGH_SIGNALS.some(s=>t.includes(s)))return "High";if(MEDIUM_SIGNALS.some(s=>t.includes(s)))return "Medium";return "Low";}
 function summarise(raw,limit=80){let f=raw.trim().split(/[.!?\n]/)[0].trim();if(f.length>limit)f=f.slice(0,limit-1).trimEnd()+"…";return f?f.charAt(0).toUpperCase()+f.slice(1):"No detail provided";}
+
+/* Feature 1: detect store from raw message text */
+function matchStore(raw){
+  const lower=raw.toLowerCase();
+  for(const s of STORES){
+    /* also match on first word of multi-word store names (e.g. "Sandton" -> "Sandton City") */
+    const firstWord=s.split(" ")[0].toLowerCase();
+    if(lower.includes(s.toLowerCase())||lower.includes(firstWord))return s;
+  }
+  return "";
+}
+
 function classify(messages){
   const list=messages.filter(m=>m.trim());
-  const tickets=list.map((raw,i)=>{const t=norm(raw);const category=matchCategory(t);const priority=matchPriority(t);
-    return {id:`TKT-${String(i+1).padStart(4,"0")}`,category,priority,summary:summarise(raw),first_step:FIRST_STEPS[category]||FIRST_STEPS.General,team:ROUTING[category]||ROUTING.General,raw_message:raw.trim()};});
+  const tickets=list.map((raw,i)=>{const t=norm(raw);const category=matchCategory(t);const priority=matchPriority(t);const store=matchStore(raw);
+    return {id:`TKT-${String(i+1).padStart(4,"0")}`,category,priority,summary:summarise(raw),first_step:FIRST_STEPS[category]||FIRST_STEPS.General,team:ROUTING[category]||ROUTING.General,raw_message:raw.trim(),store};});
   tickets.sort((a,b)=>ORDER[a.priority]-ORDER[b.priority]);
   return tickets;
 }
@@ -238,6 +257,9 @@ The receipt printer has a paper jam and the cutter isn't working
 Teams crashes every time I try to share my screen in a meeting
 Can someone set up the new starter in receiving with an email account and login
 The card machine is not connecting and customers can only pay cash right now`;
+
+/* ---- Feature 5: AI model label helper ---- */
+function aiModelLabel(){const s=document.querySelector('#aimodel');return s?s.options[s.selectedIndex].text.replace(/\s*\(.*\)\s*/,'').trim():'AI';}
 
 /* ---- state + nav ---- */
 const state = {view:"triage", tickets:[]};
@@ -288,6 +310,12 @@ function resultsHTML(){
   const base=triageBase();
   const counts={High:0,Medium:0,Low:0}; const byCat={};
   state.tickets.forEach(t=>{counts[t.priority]++;byCat[t.category]=(byCat[t.category]||0)+1;});
+
+  /* Feature 2: site-wide (store+category) major incident detection */
+  const bySiteCat={};
+  state.tickets.forEach(t=>{if(t.store){const key=`${t.store}||${t.category}`;bySiteCat[key]=(bySiteCat[key]||[]);bySiteCat[key].push(t);}});
+  const siteIncidents=Object.entries(bySiteCat).filter(([,arr])=>arr.length>=2);
+
   const mi=Object.entries(byCat).filter(([,n])=>n>=3);
   let html=`<div class="tally enter">
     <span class="count"><span class="tag high">High</span><b>${counts.High}</b></span>
@@ -296,20 +324,55 @@ function resultsHTML(){
     <span class="actions"><button class="btn btn-ghost" id="brief">AI queue brief</button><button class="btn btn-ghost" id="goexport">Export</button></span>
   </div>
   <div id="briefout"></div>`;
+
+  /* Feature 2: render site-wide banners first (stronger signal) */
+  siteIncidents.forEach(([key,arr])=>{
+    const [store,category]=key.split("||");
+    html+=`<div class="mi-banner mi-site"><b>Site-wide P1 risk:</b> ${arr.length} ${esc(category)} tickets at ${esc(store)}. Open a major incident for this site before working them one by one.</div>`;
+  });
+
+  /* Existing category-level banner (softer secondary signal) */
   if(mi.length){html+=`<div class="mi-banner"><b>Possible major incident:</b> ${mi.map(([c,n])=>`${n} tickets in ${esc(c)}`).join(", ")}. Consider opening a major incident before working these one by one.</div>`;}
+
   const lead=state.tickets[0], rest=state.tickets.slice(1);
   html+=`<p class="leadlabel">${lead.priority==="High"?"Handle first":"Top of the queue"}</p>`+cardHTML(lead,base,true,30);
   if(rest.length){html+=`<p class="group-label">Then, in order</p>`+rest.map((t,i)=>cardHTML(t,base,false,70+i*40)).join("");}
   return html;
 }
+
+/* Feature 3: determine env for net-doctor link */
+function diagEnv(category){
+  const posRelated=["Point of Sale","Hardware","Printer"];
+  return posRelated.includes(category)?"pos":"office";
+}
+
 function cardHTML(t,base,lead,delay){
   const breach=breachText(base,SLA_HOURS[t.priority]);
+
+  /* Feature 1: store chip in meta row */
+  const storeChip=t.store?`<span class="chip">${esc(t.store)}</span>`:"";
+
+  /* Feature 5: AI reasoning receipt under summary */
+  const receiptLine=t.ai?`<div class="receipt">Reasoning receipt: model ${esc(t.aimodel||"AI")} · task classify · ${esc(t.aitime||"")}</div>`:"";
+
+  /* Feature 3: Run diagnostics link */
+  const diagUrl=`https://net-doctor-nu.vercel.app/?store=${encodeURIComponent(t.store||"")}&os=win&env=${encodeURIComponent(diagEnv(t.category))}&symptom=${encodeURIComponent(t.category)}`;
+  const diagLink=`<a class="btn btn-ghost" target="_blank" rel="noopener noreferrer" href="${diagUrl}">Run diagnostics</a>`;
+
+  /* Feature 4: WhatsApp dispatch link for High priority only */
+  const waText=`P1${t.store?" "+t.store:""}: ${t.category}. ${t.summary}. Ticket ${t.id}, SLA ${SLA_HOURS[t.priority]}h. Please acknowledge and respond.`;
+  const waLink=t.priority==="High"?`<a class="btn btn-ghost" target="_blank" rel="noopener noreferrer" href="https://wa.me/?text=${encodeURIComponent(waText)}">Dispatch (WhatsApp)</a>`:"";
+
+  /* Re-check with AI button (existing logic) */
+  const recheckBtn=(t.category==="General"&&!t.ai)?`<button class="btn btn-ghost airecheck" data-id="${t.id}">Re-check with AI</button>`:"";
+
   return `<article class="card ${lead?'lead '+tagClass(t.priority):''} enter" style="animation-delay:${delay}ms">
-    <div class="meta"><span class="tag ${tagClass(t.priority)}">${tagText(t.priority)}</span><span class="chip">${esc(t.category)}</span><span class="tid">${t.id}</span>${t.ai?'<span class="chip aichip">AI-assisted</span>':''}</div>
+    <div class="meta"><span class="tag ${tagClass(t.priority)}">${tagText(t.priority)}</span><span class="chip">${esc(t.category)}</span>${storeChip}<span class="tid">${t.id}</span>${t.ai?'<span class="chip aichip">AI-assisted</span>':''}</div>
     <p class="summary">${esc(t.summary)}</p>
+    ${receiptLine}
     <div class="rowline"><span><span class="k">route</span> ${esc(t.team)}</span><span><span class="k">SLA</span> ${SLA_HOURS[t.priority]}h · breaches ${breach}</span></div>
     <p class="step"><span class="sl">First step</span>${esc(t.first_step)}</p>
-    <div class="cardact"><button class="btn btn-ghost reply" data-id="${t.id}">Copy first response</button>${(t.category==="General"&&!t.ai)?`<button class="btn btn-ghost airecheck" data-id="${t.id}" style="margin-left:8px">Re-check with AI</button>`:""}</div>
+    <div class="cardact"><button class="btn btn-ghost reply" data-id="${t.id}">Copy first response</button>${recheckBtn}${diagLink}${waLink}</div>
   </article>`;
 }
 function wireTriage(){
@@ -330,7 +393,11 @@ function wireTriage(){
         const tk=state.tickets.map(t=>({priority:t.priority,category:t.category,summary:t.summary}));
         const r=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({task:"brief",tickets:tk,model:($("#aimodel")?.value||"flash")})});
         if(!r.ok) throw 0; const d=await r.json();
-        bo.innerHTML=`<div class="card briefcard"><div class="meta"><span class="chip aichip">AI queue brief</span></div><p class="briefbody">${esc(d.brief||"").replace(/\n/g,"<br>")}</p><div class="cardact"><button class="btn btn-ghost" id="copybrief">Copy brief</button></div></div>`;
+        /* Feature 5: reasoning receipt on AI queue brief */
+        const briefLabel=aiModelLabel();
+        const briefTime=new Date().toLocaleString('en-GB');
+        const briefReceipt=`<div class="receipt">Reasoning receipt: model ${esc(briefLabel)} · task brief · ${esc(briefTime)}</div>`;
+        bo.innerHTML=`<div class="card briefcard"><div class="meta"><span class="chip aichip">AI queue brief</span></div><p class="briefbody">${esc(d.brief||"").replace(/\n/g,"<br>")}</p>${briefReceipt}<div class="cardact"><button class="btn btn-ghost" id="copybrief">Copy brief</button></div></div>`;
         bf.textContent="AI queue brief";
         const cb=$("#copybrief"); if(cb)cb.addEventListener("click",async()=>{await navigator.clipboard.writeText(d.brief||"");cb.textContent="Copied";setTimeout(()=>cb.textContent="Copy brief",1400);});
       }catch(e){ bf.textContent="AI queue brief"; bo.innerHTML=`<div class="card"><p class="briefbody" style="color:var(--ink-mute)">The AI queue brief needs the AI backend (set NVIDIA_API_KEY in Vercel). Your triaged queue below works without it.</p></div>`; }
@@ -351,6 +418,8 @@ function wireTriage(){
         t.priority=["High","Medium","Low"].includes(d.priority)?d.priority:t.priority;
         t.first_step=d.first_step||t.first_step;
         t.team=ROUTING[t.category]||ROUTING.General; t.ai=true;
+        /* Feature 5: capture model and time on re-check */
+        t.aimodel=aiModelLabel(); t.aitime=new Date().toLocaleString('en-GB');
         state.tickets.sort((a,c)=>ORDER[a.priority]-ORDER[c.priority]);
         results.innerHTML=resultsHTML(); wireResults();
       }catch(e){ b.textContent="AI not enabled"; }
