@@ -1,0 +1,194 @@
+/* ════════════════════════════════════════════════════════════════════
+   TRIAGE DESK · "DISPATCH" DESIGN SYSTEM — TOKENS
+   Project: ticket-triage · github.com/Kabelo-Theko/ticket-triage
+   Persona: air-traffic control tower for a support inbox.
+   Every ticket is a flight-progress strip; the queue is a strip bay.
+
+   Architecture: primitive → semantic → component (W3C DTCG tiers).
+   Components must reference SEMANTIC tokens only (--text-secondary,
+   never a raw hex). Themes switch on html[data-theme].
+
+   Themes:
+     night (default) — ops-room canvas, indigo-charcoal, for the
+                       24/7 dispatch desk persona
+     day             — daylight ops, paper-strip white, same signage
+   All text/background pairs measured; see design/accessibility.md.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Type primitives (identical across themes) ─────────────────────── */
+:root {
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif; /* signage voice */
+  --font-text: "Public Sans", system-ui, sans-serif;              /* body voice   */
+  --font-data: "JetBrains Mono", ui-monospace, monospace;         /* data voice   */
+
+  /* Type scale — 1.25 modular, fluid at display sizes */
+  --text-xs: 0.6875rem;   /* 11px — holder blocks, micro labels (600+) */
+  --text-sm: 0.8125rem;   /* 13px — data rows, chips, receipts          */
+  --text-base: 0.9375rem; /* 15px — body                                */
+  --text-md: 1.0625rem;   /* 17px — ledes                               */
+  --text-lg: 1.25rem;     /* 20px — strip summaries (lead)              */
+  --text-xl: 1.625rem;    /* 26px — view titles                         */
+  --text-2xl: clamp(1.9rem, 1.4rem + 2vw, 2.6rem);
+  --text-display: clamp(2.6rem, 1.7rem + 4.2vw, 4.5rem); /* condensed masthead */
+
+  --leading-tight: 1.04;  /* condensed display */
+  --leading-snug: 1.3;    /* strip summaries   */
+  --leading-body: 1.55;   /* body copy         */
+  --leading-data: 1.45;   /* mono data         */
+
+  --tracking-display: 0.01em;  /* condensed faces want a hair of air */
+  --tracking-caps: 0.09em;     /* uppercase labels                   */
+  --tracking-body: 0;
+
+  /* Weights in use: display 600/700 · text 400/500/600 · data 400/500/700 */
+
+  /* ── Space — 4px base grid ── */
+  --space-1: 4px;  --space-2: 8px;   --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px;  --space-8: 32px; --space-10: 40px;
+  --space-12: 48px; --space-16: 64px; --space-20: 80px;
+
+  /* ── Shape — flight-strip personality: hard, institutional ── */
+  --radius-xs: 2px;   /* strips, holder blocks     */
+  --radius-sm: 4px;   /* buttons, inputs, chips    */
+  --radius-md: 8px;   /* panels, dialogs           */
+  --radius-full: 9999px; /* LEDs only              */
+
+  /* ── Motion — damped-precise temperament ── */
+  --motion-micro: 120ms;   /* hover, press, toggle        */
+  --motion-small: 200ms;   /* chips, tabs, tooltips       */
+  --motion-large: 300ms;   /* panels, dialogs, view swap  */
+  --motion-deal: 240ms;    /* strip deal-in               */
+  --motion-page: 420ms;    /* one load reveal per page    */
+  --stagger-strip: 40ms;   /* per-strip deal delay        */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out-soft: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
+
+  /* ── Z scale ── */
+  --z-bar: 30; --z-toast: 60; --z-modal: 80;
+
+  /* ── Layout ── */
+  --board-max: 1180px;
+  --console-w: 372px;   /* input console column ≥ 1000px viewports */
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   NIGHT OPS (default) — the control room after dark
+   Canvas: indigo-charcoal (oklch hue 272, chroma .02) — never pure black
+   Accent: signal orange — the runway beacon. Appears saturated ONLY on
+   the handle-first strip, the primary action, and the active tab.
+   ════════════════════════════════════════════════════════════════════ */
+:root, html[data-theme="night"] {
+  color-scheme: dark;
+
+  /* canvas ramp */
+  --canvas-base: #0C0F19;
+  --canvas-sunken: #070913;      /* console wells, code blocks   */
+  --canvas-elevated: #151823;    /* panels                       */
+  --canvas-card: #1B1F2A;        /* strips                       */
+  --canvas-card-hover: #212530;
+  --canvas-overlay: #232734;     /* dialogs, toasts              */
+
+  /* ink ramp (measured on canvas-base unless noted) */
+  --text-max: #F0F3FA;           /* display headlines · 15.9:1   */
+  --text-primary: #D5DAE6;       /* body · 12.6:1                */
+  --text-secondary: #9BA1B0;     /* support text · 7.2:1         */
+  --text-tertiary: #868B9C;      /* captions on canvas only · 5.4:1 */
+  --text-disabled: #575B67;      /* decorative/disabled only     */
+  --text-inverse: #0C0F19;
+
+  /* accent — signal orange */
+  --accent: #FF6B1A;             /* 6.7:1 on canvas-base         */
+  --accent-hover: #FF833F;
+  --accent-pressed: #EA5E07;
+  --accent-text: #FF8A47;        /* inline accent text · 8.1:1   */
+  --accent-subtle: rgba(255, 107, 26, 0.10);
+  --accent-border: rgba(255, 107, 26, 0.45);
+  --accent-glow: 0 0 18px rgba(255, 107, 26, 0.16);
+  --on-accent: #1D0D07;          /* 6.6:1 on accent              */
+
+  /* semantic state language (fixed hues, tuned per canvas)
+     HIGH=danger · MED=warning · LOW=success — priority IS state here */
+  --danger: #FB8276;  --danger-text: #FF9C92;  --danger-subtle: rgba(251,130,118,0.11);
+  --danger-ink: #2A0B08;         /* ink on solid danger holder   */
+  --warning: #F0BB3B; --warning-text: #F0BB3B; --warning-subtle: rgba(240,187,59,0.10);
+  --warning-ink: #241A02;
+  --success: #54C57A; --success-text: #7BD49A; --success-subtle: rgba(84,197,122,0.10);
+  --success-ink: #06230F;
+  --info: #3FB5FD;    --info-text: #6CC6FF;    --info-subtle: rgba(63,181,253,0.10);
+
+  /* borders & lines */
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --rail-dots: rgba(255, 255, 255, 0.22);      /* strip perforation */
+
+  /* depth — dark canvas: deep shadow + 1px inner border */
+  --shadow-1: 0 1px 3px rgba(0,0,0,0.35);
+  --shadow-2: 0 4px 16px rgba(0,0,0,0.45);
+  --shadow-3: 0 16px 40px rgba(0,0,0,0.55);
+  --inner-edge: inset 0 0 0 1px rgba(255,255,255,0.04);
+
+  --focus-ring: 0 0 0 2px var(--canvas-base), 0 0 0 4px var(--accent);
+  --scrim: rgba(4, 6, 12, 0.72);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DAYLIGHT OPS — paper flight strips on the day desk
+   ════════════════════════════════════════════════════════════════════ */
+html[data-theme="day"] {
+  color-scheme: light;
+
+  --canvas-base: #F2F3F7;
+  --canvas-sunken: #E9EBF1;
+  --canvas-elevated: #FBFBFD;
+  --canvas-card: #FFFFFF;
+  --canvas-card-hover: #F7F8FB;
+  --canvas-overlay: #FFFFFF;
+
+  --text-max: #101320;           /* 16.9:1 */
+  --text-primary: #23273A;       /* 13.4:1 */
+  --text-secondary: #545A70;     /* 6.9:1  */
+  --text-tertiary: #6A7086;      /* 5.0:1  */
+  --text-disabled: #A8ACBC;
+  --text-inverse: #F5F6FA;
+
+  --accent: #BC4A00;             /* burnt signal orange · 5.1:1 with on-accent */
+  --accent-hover: #A03F00;
+  --accent-pressed: #873500;
+  --accent-text: #A84200;        /* 5.6:1 on canvas-base         */
+  --accent-subtle: rgba(188, 74, 0, 0.09);
+  --accent-border: rgba(188, 74, 0, 0.45);
+  --accent-glow: 0 0 18px rgba(188, 74, 0, 0.12);
+  --on-accent: #FFFFFF;          /* 5.1:1 on accent              */
+
+  --danger: #B3382E;  --danger-text: #A83228;  --danger-subtle: rgba(179,56,46,0.08);
+  --danger-ink: #FFF5F4;
+  --warning: #8A6100; --warning-text: #7A5600; --warning-subtle: rgba(158,111,0,0.10);
+  --warning-ink: #FFFAEE;
+  --success: #24784A; --success-text: #1F6E43; --success-subtle: rgba(36,120,74,0.09);
+  --success-ink: #F2FBF5;
+  --info: #0A6EA8;    --info-text: #09648F;    --info-subtle: rgba(10,110,168,0.08);
+
+  --border-default: rgba(16, 19, 32, 0.11);
+  --border-strong: rgba(16, 19, 32, 0.20);
+  --rail-dots: rgba(16, 19, 32, 0.26);
+
+  --shadow-1: 0 1px 2px rgba(16,19,32,0.06), 0 1px 3px rgba(16,19,32,0.08);
+  --shadow-2: 0 4px 10px -2px rgba(16,19,32,0.10), 0 2px 4px -2px rgba(16,19,32,0.06);
+  --shadow-3: 0 18px 36px -6px rgba(16,19,32,0.14);
+  --inner-edge: inset 0 0 0 1px rgba(255,255,255,0.6);
+
+  --focus-ring: 0 0 0 2px var(--canvas-base), 0 0 0 4px var(--accent);
+  --scrim: rgba(16, 19, 32, 0.45);
+}
+
+/* ── Component aliases (both themes) ───────────────────────────────── */
+:root {
+  /* priority ↔ semantic mapping — the strip-holder language */
+  --p-high: var(--danger);       --p-high-ink: var(--danger-ink);
+  --p-high-text: var(--danger-text); --p-high-subtle: var(--danger-subtle);
+  --p-med: var(--warning);       --p-med-ink: var(--warning-ink);
+  --p-med-text: var(--warning-text); --p-med-subtle: var(--warning-subtle);
+  --p-low: var(--success);       --p-low-ink: var(--success-ink);
+  --p-low-text: var(--success-text); --p-low-subtle: var(--success-subtle);
+}

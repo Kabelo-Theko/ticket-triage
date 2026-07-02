@@ -1,179 +1,417 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="night">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Triage Desk: first-line support triage</title>
-<meta name="description" content="Paste a noisy support inbox. Get it sorted by what to handle first, with routing, SLA and a ready reply." />
+<title>Triage Desk — dispatch board for first-line support</title>
+<meta name="description" content="Paste a noisy support inbox. Every message becomes a flight strip: category, priority, routing team, SLA countdown and a ready first reply. Rule-based, explainable, in your browser." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 <style>
-  :root{
-    --canvas:#f4f1ea; --surface:#fff; --hairline:#e5dfd3; --ink:#1c1b18; --ink-soft:#514c41; --ink-mute:#847d6d;
-    --accent:#0e6e63; --accent-press:#0a554c;
-    --high-bg:#fbe9e6; --high-ink:#9c2c1c; --high-rule:#c0392b;
-    --med-bg:#f8efd8; --med-ink:#855405; --med-rule:#c8860d;
-    --low-bg:#e8f0ea; --low-ink:#356048; --low-rule:#4a7a5e;
-    --radius:12px; --shadow:0 1px 2px rgba(28,27,24,.05), 0 14px 30px -18px rgba(28,27,24,.28);
-    --motion:460ms cubic-bezier(.16,1,.3,1);
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--canvas);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.5;background-image:radial-gradient(rgba(28,27,24,.018) 1px,transparent 1px);background-size:4px 4px}
-  .wrap{max-width:1120px;margin:0 auto;padding:0 28px}
-  a{color:inherit}
+/* ════════════════════════════════════════════════════════════════
+   TRIAGE DESK · "DISPATCH" — every ticket is a flight strip.
+   Design system: design/tokens.css (inlined below for zero-dep use)
+   Themes: night (ops room, default) · day (paper strips)
+   ════════════════════════════════════════════════════════════════ */
+:root{
+  --font-display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --font-text:"Public Sans",system-ui,sans-serif;
+  --font-data:"JetBrains Mono",ui-monospace,monospace;
+  --text-xs:.6875rem;--text-sm:.8125rem;--text-base:.9375rem;--text-md:1.0625rem;
+  --text-lg:1.25rem;--text-xl:1.625rem;--text-2xl:clamp(1.9rem,1.4rem + 2vw,2.6rem);
+  --text-display:clamp(2.6rem,1.7rem + 4.2vw,4.5rem);
+  --leading-tight:1.04;--leading-snug:1.3;--leading-body:1.55;--leading-data:1.45;
+  --tracking-caps:.09em;
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;
+  --space-6:24px;--space-8:32px;--space-10:40px;--space-12:48px;--space-16:64px;
+  --radius-xs:2px;--radius-sm:4px;--radius-md:8px;--radius-full:9999px;
+  --motion-micro:120ms;--motion-small:200ms;--motion-large:300ms;--motion-deal:240ms;--motion-page:420ms;--stagger-strip:40ms;
+  --ease-standard:cubic-bezier(.2,0,0,1);--ease-out-soft:cubic-bezier(.32,.72,0,1);--ease-emphasized:cubic-bezier(.05,.7,.1,1);
+  --z-bar:30;--z-toast:60;--z-modal:80;
+  --board-max:1180px;--console-w:372px;
+}
+:root,html[data-theme="night"]{
+  color-scheme:dark;
+  --canvas-base:#0C0F19;--canvas-sunken:#070913;--canvas-elevated:#151823;
+  --canvas-card:#1B1F2A;--canvas-card-hover:#212530;--canvas-overlay:#232734;
+  --text-max:#F0F3FA;--text-primary:#D5DAE6;--text-secondary:#9BA1B0;
+  --text-tertiary:#868B9C;--text-disabled:#575B67;--text-inverse:#0C0F19;
+  --accent:#FF6B1A;--accent-hover:#FF833F;--accent-pressed:#EA5E07;--accent-text:#FF8A47;
+  --accent-subtle:rgba(255,107,26,.10);--accent-border:rgba(255,107,26,.45);
+  --accent-glow:0 0 18px rgba(255,107,26,.16);--on-accent:#1D0D07;
+  --danger:#FB8276;--danger-text:#FF9C92;--danger-subtle:rgba(251,130,118,.11);--danger-ink:#2A0B08;
+  --warning:#F0BB3B;--warning-text:#F0BB3B;--warning-subtle:rgba(240,187,59,.10);--warning-ink:#241A02;
+  --success:#54C57A;--success-text:#7BD49A;--success-subtle:rgba(84,197,122,.10);--success-ink:#06230F;
+  --info:#3FB5FD;--info-text:#6CC6FF;--info-subtle:rgba(63,181,253,.10);
+  --border-default:rgba(255,255,255,.08);--border-strong:rgba(255,255,255,.16);--rail-dots:rgba(255,255,255,.22);
+  --shadow-1:0 1px 3px rgba(0,0,0,.35);--shadow-2:0 4px 16px rgba(0,0,0,.45);--shadow-3:0 16px 40px rgba(0,0,0,.55);
+  --inner-edge:inset 0 0 0 1px rgba(255,255,255,.04);
+  --focus-ring:0 0 0 2px var(--canvas-base),0 0 0 4px var(--accent);
+  --scrim:rgba(4,6,12,.72);
+}
+html[data-theme="day"]{
+  color-scheme:light;
+  --canvas-base:#F2F3F7;--canvas-sunken:#E9EBF1;--canvas-elevated:#FBFBFD;
+  --canvas-card:#FFFFFF;--canvas-card-hover:#F7F8FB;--canvas-overlay:#FFFFFF;
+  --text-max:#101320;--text-primary:#23273A;--text-secondary:#545A70;
+  --text-tertiary:#6A7086;--text-disabled:#A8ACBC;--text-inverse:#F5F6FA;
+  --accent:#BC4A00;--accent-hover:#A03F00;--accent-pressed:#873500;--accent-text:#A84200;
+  --accent-subtle:rgba(188,74,0,.09);--accent-border:rgba(188,74,0,.45);
+  --accent-glow:0 0 18px rgba(188,74,0,.12);--on-accent:#FFFFFF;
+  --danger:#B3382E;--danger-text:#A83228;--danger-subtle:rgba(179,56,46,.08);--danger-ink:#FFF5F4;
+  --warning:#8A6100;--warning-text:#7A5600;--warning-subtle:rgba(158,111,0,.10);--warning-ink:#FFFAEE;
+  --success:#24784A;--success-text:#1F6E43;--success-subtle:rgba(36,120,74,.09);--success-ink:#F2FBF5;
+  --info:#0A6EA8;--info-text:#09648F;--info-subtle:rgba(10,110,168,.08);
+  --border-default:rgba(16,19,32,.11);--border-strong:rgba(16,19,32,.20);--rail-dots:rgba(16,19,32,.26);
+  --shadow-1:0 1px 2px rgba(16,19,32,.06),0 1px 3px rgba(16,19,32,.08);
+  --shadow-2:0 4px 10px -2px rgba(16,19,32,.10),0 2px 4px -2px rgba(16,19,32,.06);
+  --shadow-3:0 18px 36px -6px rgba(16,19,32,.14);
+  --inner-edge:inset 0 0 0 1px rgba(255,255,255,.6);
+  --focus-ring:0 0 0 2px var(--canvas-base),0 0 0 4px var(--accent);
+  --scrim:rgba(16,19,32,.45);
+}
+:root{
+  --p-high:var(--danger);--p-high-ink:var(--danger-ink);--p-high-text:var(--danger-text);--p-high-subtle:var(--danger-subtle);
+  --p-med:var(--warning);--p-med-ink:var(--warning-ink);--p-med-text:var(--warning-text);--p-med-subtle:var(--warning-subtle);
+  --p-low:var(--success);--p-low-ink:var(--success-ink);--p-low-text:var(--success-text);--p-low-subtle:var(--success-subtle);
+}
 
-  /* nav */
-  .topbar{position:sticky;top:0;z-index:30;background:rgba(244,241,234,.86);backdrop-filter:blur(8px);border-bottom:1px solid var(--hairline)}
-  .topbar .row{max-width:1120px;margin:0 auto;padding:13px 28px;display:flex;align-items:center;gap:16px}
-  .brand{display:flex;align-items:center;gap:9px;font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:15px;letter-spacing:-.01em}
-  .brand svg{display:block}
-  .nav{display:flex;gap:4px;margin-left:auto;align-items:center}
-  .nav a{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-soft);text-decoration:none;padding:7px 12px;border-radius:7px;border:1px solid transparent;cursor:pointer}
-  .nav a:hover{border-color:var(--hairline)}
-  .nav a.active{color:var(--accent);border-color:#cfe0da;background:#eaf3f0}
-  .hamb{display:none;margin-left:auto;background:transparent;border:1px solid var(--hairline);border-radius:7px;padding:8px 10px;cursor:pointer}
-  .hamb span{display:block;width:18px;height:2px;background:var(--ink);margin:3px 0;border-radius:2px}
-  @media (max-width:680px){
-    .nav{display:none;position:absolute;top:54px;right:14px;left:14px;flex-direction:column;align-items:stretch;background:var(--surface);border:1px solid var(--hairline);border-radius:10px;padding:8px}
-    .nav.open{display:flex}
-    .hamb{display:block}
-  }
+/* ── base ── */
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--canvas-base);color:var(--text-primary);font-family:var(--font-text);font-size:var(--text-base);line-height:var(--leading-body);-webkit-font-smoothing:antialiased;transition:background var(--motion-large) var(--ease-standard)}
+img,svg{display:block}
+a{color:inherit}
+.wrap{max-width:var(--board-max);margin:0 auto;padding:0 clamp(16px,4vw,32px)}
+.mono{font-family:var(--font-data)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip{position:absolute;left:-9999px;top:0;z-index:100;background:var(--accent);color:var(--on-accent);font-family:var(--font-display);font-weight:600;letter-spacing:var(--tracking-caps);text-transform:uppercase;padding:12px 20px;border-radius:0 0 var(--radius-sm) 0;text-decoration:none}
+.skip:focus{left:0}
+.ic{width:18px;height:18px;stroke:currentColor;stroke-width:1.75;fill:none;stroke-linecap:square;stroke-linejoin:miter;flex:none}
+.ic.lg{width:22px;height:22px}
 
-  header.mast{padding:48px 0 26px}
-  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-mute)}
-  h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(28px,4.6vw,46px);line-height:1.05;letter-spacing:-.02em;margin:14px 0 0;max-width:18ch}
-  .lede{font-size:16.5px;color:var(--ink-soft);margin:13px 0 0;max-width:60ch}
-  .lede b{color:var(--ink);font-weight:600}
+/* ── command bar ── */
+.cmdbar{position:sticky;top:0;z-index:var(--z-bar);background:color-mix(in srgb,var(--canvas-elevated) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border-default)}
+.cmdbar .row{max-width:var(--board-max);margin:0 auto;padding:0 clamp(16px,4vw,32px);display:flex;align-items:stretch;gap:var(--space-5);min-height:56px}
+.brand{display:flex;align-items:center;gap:12px;color:var(--text-max);text-decoration:none}
+.brand .ic{color:var(--accent);width:24px;height:24px}
+.brand .wordmark{display:flex;flex-direction:column;line-height:1}
+.brand .wm-name{font-family:var(--font-display);font-weight:700;font-size:19px;letter-spacing:.05em;text-transform:uppercase}
+.brand .wm-sub{font-family:var(--font-data);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-tertiary);margin-top:4px}
+.tabs{display:flex;margin-left:var(--space-4);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{appearance:none;background:none;border:none;border-bottom:2px solid transparent;color:var(--text-secondary);font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:.12em;text-transform:uppercase;padding:0 var(--space-4);cursor:pointer;display:flex;align-items:center;gap:8px;transition:color var(--motion-micro) var(--ease-standard),border-color var(--motion-small) var(--ease-standard)}
+.tab:hover{color:var(--text-primary)}
+.tab[aria-current="page"]{color:var(--accent-text);border-bottom-color:var(--accent)}
+.tab:focus-visible{outline:none;box-shadow:var(--focus-ring);border-radius:var(--radius-xs)}
+.bar-right{margin-left:auto;display:flex;align-items:center;gap:var(--space-4)}
+.clock{font-family:var(--font-data);font-size:var(--text-sm);color:var(--text-secondary);font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+.clock .zl{font-size:9.5px;letter-spacing:.18em;color:var(--text-tertiary)}
+.iconbtn{appearance:none;background:transparent;border:1px solid var(--border-default);border-radius:var(--radius-sm);color:var(--text-secondary);width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color var(--motion-micro) var(--ease-standard),color var(--motion-micro) var(--ease-standard)}
+.iconbtn:hover{border-color:var(--border-strong);color:var(--text-primary)}
+.iconbtn:focus-visible{outline:none;box-shadow:var(--focus-ring)}
 
-  .view{padding-bottom:72px}
-  .desk{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:28px;align-items:start}
-  @media (max-width:880px){.desk{grid-template-columns:1fr}}
-  .panel{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;position:sticky;top:74px}
-  @media (max-width:880px){.panel{position:static}}
-  .panel h2{font-family:"Space Grotesk",sans-serif;font-size:15px;font-weight:600;margin:0 0 4px}
-  .panel .hint{font-size:13px;color:var(--ink-mute);margin:0 0 14px}
-  textarea{width:100%;min-height:190px;resize:vertical;font-family:"IBM Plex Mono",monospace;font-size:13px;line-height:1.6;color:var(--ink);background:#fcfbf8;border:1px solid var(--hairline);border-radius:9px;padding:12px 13px}
-  textarea:focus{outline:2px solid var(--accent);outline-offset:2px;border-color:transparent}
-  label.fld{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin:14px 0 5px}
-  input[type=time]{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--ink);background:#fcfbf8;border:1px solid var(--hairline);border-radius:9px;padding:9px 11px}
-  select.aimodel{width:100%;font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--ink);background:#fcfbf8;border:1px solid var(--hairline);border-radius:9px;padding:9px 11px}
-  select.aimodel:focus{outline:2px solid var(--accent);outline-offset:2px}
-  .row-btns{display:flex;gap:9px;margin-top:13px;flex-wrap:wrap}
-  button.btn{font-family:"IBM Plex Sans",sans-serif;font-size:14px;font-weight:600;border-radius:9px;padding:11px 16px;cursor:pointer;border:1px solid transparent;transition:background var(--motion),border-color var(--motion)}
-  button.btn:active{transform:translateY(1px)}
-  button.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-  .btn-primary{background:var(--accent);color:#fff}
-  .btn-primary:hover{background:var(--accent-press)}
-  .btn-ghost{background:transparent;color:var(--ink-soft);border-color:var(--hairline);text-decoration:none;display:inline-flex;align-items:center;font-family:"IBM Plex Sans",sans-serif;font-size:14px;font-weight:600;border-radius:9px;padding:11px 16px;cursor:pointer;border:1px solid var(--hairline);transition:background var(--motion),border-color var(--motion)}
-  .btn-ghost:hover{border-color:var(--ink-mute);color:var(--ink)}
-  .legend{margin-top:18px;border-top:1px solid var(--hairline);padding-top:16px}
-  .legend .lh{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin-bottom:10px}
-  .legend-item{display:flex;gap:10px;align-items:baseline;font-size:12.5px;color:var(--ink-soft);margin-bottom:7px}
+/* ── masthead ── */
+.mast{padding:var(--space-12) 0 var(--space-8)}
+.eyebrow{font-family:var(--font-data);font-size:var(--text-xs);letter-spacing:.2em;text-transform:uppercase;color:var(--text-tertiary);display:flex;align-items:center;gap:8px}
+.eyebrow::before{content:"";width:22px;height:1px;background:var(--accent);flex:none}
+h1{font-family:var(--font-display);font-weight:700;font-size:var(--text-display);line-height:var(--leading-tight);letter-spacing:.01em;text-transform:uppercase;color:var(--text-max);margin:var(--space-3) 0 0;max-width:16ch;text-wrap:balance}
+h1 .amber{color:var(--accent-text)}
+.lede{font-size:var(--text-md);color:var(--text-secondary);margin:var(--space-4) 0 0;max-width:62ch;text-wrap:pretty}
+.lede b{color:var(--text-primary);font-weight:600}
 
-  .tag{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:5px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
-  .tag::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.85}
-  .tag.high{background:var(--high-bg);color:var(--high-ink)} .tag.medium{background:var(--med-bg);color:var(--med-ink)} .tag.low{background:var(--low-bg);color:var(--low-ink)}
-  .chip{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);border:1px solid var(--hairline);border-radius:5px;padding:3px 8px;white-space:nowrap}
-  .chip.aichip{border-color:#cfe0da;color:var(--accent)}
-  .briefcard{margin-bottom:18px;border-left:3px solid var(--accent)}
-  .briefbody{font-size:14px;color:var(--ink-soft);line-height:1.65;margin:8px 0 0}
-  @media (max-width:560px){ h1{font-size:30px} table.ref{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch} .tally .actions{margin-left:0;width:100%} }
-  .tid{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-mute)}
+/* ── board layout ── */
+.view{padding-bottom:var(--space-16)}
+.board{display:grid;grid-template-columns:minmax(0,var(--console-w)) minmax(0,1fr);gap:var(--space-6);align-items:start}
+@media (max-width:1000px){.board{grid-template-columns:1fr}}
 
-  .results{min-height:320px}
-  .tally{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
-  .tally .count{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-soft);font-family:"IBM Plex Mono",monospace}
-  .tally .count b{color:var(--ink)}
-  .tally .actions{margin-left:auto;display:flex;gap:8px}
-  .mi-banner{background:var(--high-bg);border:1px solid #e8c4bc;border-left:3px solid var(--high-rule);border-radius:var(--radius);padding:13px 16px;margin-bottom:18px;font-size:14px;color:var(--ink)}
-  .mi-banner b{color:var(--high-ink)}
-  .mi-site{border-left:5px solid #8b0000;background:#f9e0db}
-  .leadlabel{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--high-rule);margin:0 0 9px}
-  .card{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;margin-bottom:12px;position:relative}
-  .card .meta{display:flex;align-items:center;gap:10px;margin-bottom:9px;flex-wrap:wrap}
-  .card .summary{font-size:15px;color:var(--ink);margin:0}
-  .card .rowline{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--ink-soft);font-family:"IBM Plex Mono",monospace}
-  .card .rowline .k{color:var(--ink-mute)}
-  .card .step{font-size:13.5px;color:var(--ink-soft);margin:11px 0 0;padding-top:11px;border-top:1px dashed var(--hairline)}
-  .card .step .sl{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-mute);display:block;margin-bottom:3px}
-  .card .cardact{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .lead{border-left:4px solid var(--high-rule);padding:22px 24px}
-  .lead.medium{border-left-color:var(--med-rule)} .lead.low{border-left-color:var(--low-rule)}
-  .lead .summary{font-family:"Space Grotesk",sans-serif;font-size:20px;font-weight:600;letter-spacing:-.01em;line-height:1.25}
-  .group-label{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-mute);margin:26px 0 11px}
+/* ── console (input panel) ── */
+.console{background:var(--canvas-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);box-shadow:var(--shadow-1),var(--inner-edge);position:sticky;top:74px;overflow:hidden}
+@media (max-width:1000px){.console{position:static}}
+.console-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--border-default)}
+.console-head .ct{font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-primary);display:flex;align-items:center;gap:8px}
+.console-head .ct .ic{color:var(--text-tertiary)}
+.wirecount{font-family:var(--font-data);font-size:var(--text-xs);color:var(--text-tertiary);font-variant-numeric:tabular-nums}
+.console-body{padding:var(--space-4)}
+.fld{display:block;font-family:var(--font-data);font-size:var(--text-xs);letter-spacing:.14em;text-transform:uppercase;color:var(--text-tertiary);margin:var(--space-4) 0 var(--space-2)}
+.fld:first-child{margin-top:0}
+textarea,input[type=time],select{width:100%;font-family:var(--font-data);font-size:var(--text-sm);line-height:1.6;color:var(--text-primary);background:var(--canvas-sunken);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:12px;transition:border-color var(--motion-micro) var(--ease-standard)}
+textarea{min-height:188px;resize:vertical}
+textarea::placeholder{color:var(--text-disabled)}
+textarea:hover,input[type=time]:hover,select:hover{border-color:var(--border-strong)}
+textarea:focus-visible,input[type=time]:focus-visible,select:focus-visible{outline:none;box-shadow:var(--focus-ring);border-color:transparent}
+input[type=time]{width:auto}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 49%,var(--text-tertiary) 50%),linear-gradient(135deg,var(--text-tertiary) 50%,transparent 51%);background-position:calc(100% - 17px) 55%,calc(100% - 12px) 55%;background-size:5px 5px;background-repeat:no-repeat;padding-right:36px}
+.row-btns{display:flex;gap:var(--space-2);margin-top:var(--space-5);flex-wrap:wrap}
 
-  .empty{border:1px dashed var(--hairline);border-radius:var(--radius);padding:34px;background:rgba(255,255,255,.5)}
-  .empty h3{font-family:"Space Grotesk",sans-serif;font-size:19px;margin:0 0 8px;letter-spacing:-.01em}
-  .empty p{color:var(--ink-soft);margin:0 0 18px;max-width:52ch}
+/* ── buttons: 6 designed states each ── */
+.btn{appearance:none;font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:.1em;text-transform:uppercase;border-radius:var(--radius-sm);padding:12px 20px;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:9px;text-decoration:none;transition:background var(--motion-micro) var(--ease-standard),border-color var(--motion-micro) var(--ease-standard),color var(--motion-micro) var(--ease-standard),transform var(--motion-micro) var(--ease-standard)}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+.btn[disabled],.btn[aria-busy="true"]{cursor:not-allowed;opacity:.55}
+.btn-primary{background:var(--accent);color:var(--on-accent)}
+.btn-primary:hover:not([disabled]){background:var(--accent-hover)}
+.btn-primary:active:not([disabled]){background:var(--accent-pressed)}
+.btn-ghost{background:transparent;color:var(--text-secondary);border-color:var(--border-default)}
+.btn-ghost:hover:not([disabled]){border-color:var(--border-strong);color:var(--text-primary)}
+.btn-sm{font-size:13px;padding:8px 12px;letter-spacing:.08em}
+.btn .spin{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:var(--radius-full);animation:rot .7s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
 
-  pre.block{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink);background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);padding:18px 20px;white-space:pre-wrap;line-height:1.6;margin:0;box-shadow:var(--shadow)}
-  .barrow{display:flex;gap:9px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
-  .ref h2{font-family:"Space Grotesk",sans-serif;font-size:17px;margin:26px 0 10px;letter-spacing:-.01em}
-  table.ref{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);overflow:hidden;font-size:13.5px;box-shadow:var(--shadow)}
-  table.ref th,table.ref td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--hairline);vertical-align:top}
-  table.ref th{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mute);background:#fbfaf7}
-  table.ref tr:last-child td{border-bottom:0}
+/* ── legend ── */
+.legend{border-top:1px solid var(--border-default);padding:var(--space-4)}
+.legend .lh{font-family:var(--font-data);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:var(--space-3)}
+.legend-item{display:flex;gap:12px;align-items:center;font-size:var(--text-sm);color:var(--text-secondary);margin-bottom:8px}
+.legend-item:last-child{margin-bottom:0}
 
-  .enter{opacity:0;transform:translateY(8px);animation:rise var(--motion) forwards}
-  @keyframes rise{to{opacity:1;transform:none}}
-  @media (prefers-reduced-motion:reduce){.enter{animation:none;opacity:1;transform:none}button{transition:none}}
-  footer{border-top:1px solid var(--hairline);padding:22px 0 40px;color:var(--ink-mute);font-size:12.5px;display:flex;gap:16px;flex-wrap:wrap}
-  footer a{color:var(--ink-soft);text-decoration:none;border-bottom:1px solid var(--hairline)}
-  .src-note{font-family:"IBM Plex Mono",monospace}
+/* holder block — the colored strip holder */
+.holder{font-family:var(--font-display);font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:4px 8px;border-radius:var(--radius-xs);flex:none;line-height:1.4}
+.holder.high{background:var(--p-high);color:var(--p-high-ink)}
+.holder.med{background:var(--p-med);color:var(--p-med-ink)}
+.holder.low{background:var(--p-low);color:var(--p-low-ink)}
 
-  /* Feature 5: reasoning receipt */
-  .receipt{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-mute);margin:6px 0 0;line-height:1.5}
+/* chips */
+.chip{font-family:var(--font-data);font-size:var(--text-xs);color:var(--text-secondary);border:1px solid var(--border-default);border-radius:var(--radius-xs);padding:4px 8px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.chip .ic{width:12px;height:12px}
+.chip.aichip{border-color:var(--accent-border);color:var(--accent-text)}
+.tid{font-family:var(--font-data);font-size:var(--text-xs);color:var(--text-tertiary);letter-spacing:.06em}
+
+/* ── tally: departure board ── */
+.tally{display:flex;gap:var(--space-5);align-items:center;flex-wrap:wrap;background:var(--canvas-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);box-shadow:var(--inner-edge)}
+.tcount{display:flex;align-items:baseline;gap:8px}
+.tcount .led{width:9px;height:9px;border-radius:var(--radius-xs);align-self:center}
+.tcount.high .led{background:var(--p-high)} .tcount.med .led{background:var(--p-med)} .tcount.low .led{background:var(--p-low)}
+.tcount .tk{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-tertiary)}
+.tcount .tv{font-family:var(--font-data);font-weight:700;font-size:var(--text-lg);color:var(--text-max);font-variant-numeric:tabular-nums}
+.tally .actions{margin-left:auto;display:flex;gap:var(--space-2);flex-wrap:wrap}
+@media (max-width:560px){.tally .actions{margin-left:0;width:100%}}
+
+/* ── bay labels ── */
+.bay{display:flex;align-items:center;gap:12px;margin:var(--space-6) 0 var(--space-3)}
+.bay .bnum{font-family:var(--font-data);font-size:10px;letter-spacing:.2em;color:var(--text-tertiary)}
+.bay .bname{font-family:var(--font-display);font-weight:700;font-size:15px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-primary)}
+.bay.first .bname{color:var(--accent-text)}
+.bay .rule{flex:1;height:1px;background:var(--border-default)}
+.bay.first .rule{background:linear-gradient(90deg,var(--accent-border),transparent)}
+
+/* ── flight strip ── */
+.strip{display:grid;grid-template-columns:14px 52px minmax(0,1fr);background:var(--canvas-card);border:1px solid var(--border-default);border-radius:var(--radius-xs);box-shadow:var(--shadow-1),var(--inner-edge);margin-bottom:var(--space-2);overflow:hidden;transition:background var(--motion-micro) var(--ease-standard),border-color var(--motion-micro) var(--ease-standard)}
+.strip:hover{background:var(--canvas-card-hover);border-color:var(--border-strong)}
+.strip .rail{background-image:radial-gradient(var(--rail-dots) 1.3px,transparent 1.4px);background-size:14px 12px;background-position:center 6px;border-right:1px dashed var(--border-default)}
+.strip .holderblock{display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.1em;text-transform:uppercase;writing-mode:vertical-rl;transform:rotate(180deg);padding:10px 0}
+.strip.high .holderblock{background:var(--p-high);color:var(--p-high-ink)}
+.strip.med .holderblock{background:var(--p-med);color:var(--p-med-ink)}
+.strip.low .holderblock{background:var(--p-low);color:var(--p-low-ink)}
+.strip .body{padding:var(--space-3) var(--space-4);min-width:0}
+.strip .meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.strip .summary{font-size:var(--text-base);line-height:var(--leading-snug);color:var(--text-primary);margin:0;text-wrap:pretty}
+.receipt{font-family:var(--font-data);font-size:10.5px;color:var(--text-tertiary);margin:8px 0 0;line-height:1.5}
+.dataline{display:flex;gap:var(--space-5);flex-wrap:wrap;margin-top:var(--space-2);font-family:var(--font-data);font-size:var(--text-xs);color:var(--text-secondary);font-variant-numeric:tabular-nums}
+.dataline .k{color:var(--text-tertiary);letter-spacing:.1em;text-transform:uppercase;margin-right:8px}
+.dataline .breach-late{color:var(--danger-text);font-weight:700}
+.dataline .breach-soon{color:var(--warning-text);font-weight:700}
+.firststep{font-size:var(--text-sm);color:var(--text-secondary);margin:var(--space-3) 0 0;padding-top:var(--space-3);border-top:1px dashed var(--border-default);text-wrap:pretty}
+.firststep .sl{font-family:var(--font-data);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-tertiary);display:block;margin-bottom:4px}
+.stripact{margin-top:var(--space-3);display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:center}
+
+/* the ONE foreground element: handle-first beacon strip */
+.strip.lead{grid-template-columns:14px 60px minmax(0,1fr);border-color:var(--accent-border);box-shadow:var(--shadow-2),var(--accent-glow),var(--inner-edge)}
+.strip.lead .summary{font-family:var(--font-display);font-weight:600;font-size:var(--text-xl);letter-spacing:.01em;line-height:1.12;text-transform:none;color:var(--text-max)}
+.beaconlabel{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-data);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent-text)}
+.beacon{width:8px;height:8px;background:var(--accent);border-radius:var(--radius-full);position:relative;flex:none}
+.beacon::after{content:"";position:absolute;inset:-5px;border:1.5px solid var(--accent);border-radius:var(--radius-full);opacity:0;animation:ping 1.1s var(--ease-emphasized) 2 both}
+@keyframes ping{0%{transform:scale(.4);opacity:.9}100%{transform:scale(1.25);opacity:0}}
+
+/* deal-in animation */
+.deal{opacity:0;transform:translateY(10px);animation:deal var(--motion-deal) var(--ease-out-soft) forwards;animation-delay:calc(var(--i,0)*var(--stagger-strip))}
+@keyframes deal{to{opacity:1;transform:none}}
+.reveal{opacity:0;transform:translateY(8px);animation:deal var(--motion-page) var(--ease-emphasized) forwards}
+
+/* ── banners ── */
+.banner{display:flex;gap:12px;align-items:flex-start;border-radius:var(--radius-xs);padding:var(--space-3) var(--space-4);margin:var(--space-3) 0;font-size:var(--text-sm);border:1px solid}
+.banner .ic{margin-top:1px}
+.banner.site{background:var(--danger-subtle);border-color:var(--danger);color:var(--text-primary)}
+.banner.site b{color:var(--danger-text)}
+.banner.cat{background:var(--warning-subtle);border-color:var(--warning);color:var(--text-primary)}
+.banner.cat b{color:var(--warning-text)}
+.banner.site .ic{color:var(--danger-text)}.banner.cat .ic{color:var(--warning-text)}
+
+/* ── empty / quiet state: the radar ── */
+.empty{border:1px dashed var(--border-strong);border-radius:var(--radius-md);padding:var(--space-10) var(--space-8);background:var(--canvas-elevated);text-align:left;display:grid;grid-template-columns:150px minmax(0,1fr);gap:var(--space-8);align-items:center}
+@media (max-width:640px){.empty{grid-template-columns:1fr;justify-items:start;gap:var(--space-5)}}
+.radar{width:150px;height:150px}
+.radar .grid{stroke:var(--border-strong);fill:none}
+.radar .sweepline{stroke:var(--accent);stroke-width:1.5;transform-origin:75px 75px;animation:sweep 7s linear infinite}
+.radar .sweepfan{fill:var(--accent);opacity:.07;transform-origin:75px 75px;animation:sweep 7s linear infinite}
+.radar .blip{fill:var(--text-tertiary);animation:blip 7s linear infinite}
+.radar .blip.b2{animation-delay:2.2s}.radar .blip.b3{animation-delay:4.6s}
+@keyframes sweep{to{transform:rotate(360deg)}}
+@keyframes blip{0%,8%{opacity:0}12%{opacity:1}45%{opacity:.25}100%{opacity:0}}
+.empty h3{font-family:var(--font-display);font-weight:700;font-size:var(--text-xl);letter-spacing:.03em;text-transform:uppercase;color:var(--text-max);margin:0 0 var(--space-2)}
+.empty p{color:var(--text-secondary);margin:0 0 var(--space-2);max-width:54ch;font-size:var(--text-sm);text-wrap:pretty}
+.empty .cta{margin-top:var(--space-4)}
+
+/* ── skeleton strips (sequencing) ── */
+.skel{display:grid;grid-template-columns:14px 52px 1fr;border:1px solid var(--border-default);border-radius:var(--radius-xs);background:var(--canvas-card);margin-bottom:var(--space-2);overflow:hidden}
+.skel .rail{background-image:radial-gradient(var(--rail-dots) 1.3px,transparent 1.4px);background-size:14px 12px;border-right:1px dashed var(--border-default);height:86px}
+.skel .hb{background:var(--canvas-overlay)}
+.skel .lines{padding:var(--space-3) var(--space-4)}
+.skel .ln{height:12px;border-radius:var(--radius-xs);background:linear-gradient(90deg,var(--canvas-overlay) 25%,var(--canvas-card-hover) 45%,var(--canvas-overlay) 65%);background-size:220% 100%;animation:shimmer 1.15s linear infinite;margin-bottom:8px}
+.skel .ln.w60{width:60%}.skel .ln.w85{width:85%}.skel .ln.w40{width:40%}
+@keyframes shimmer{to{background-position:-120% 0}}
+.seqnote{font-family:var(--font-data);font-size:var(--text-xs);letter-spacing:.16em;text-transform:uppercase;color:var(--text-tertiary);margin:0 0 var(--space-3);display:flex;align-items:center;gap:12px}
+.seqnote .spin{width:12px;height:12px;border:2px solid var(--accent);border-right-color:transparent;border-radius:var(--radius-full);animation:rot .7s linear infinite}
+
+/* ── AI brief card ── */
+.aibrief{background:var(--canvas-card);border:1px solid var(--accent-border);border-radius:var(--radius-xs);padding:var(--space-4);margin:var(--space-3) 0;box-shadow:var(--inner-edge)}
+.aibrief .briefbody{font-size:var(--text-sm);color:var(--text-primary);line-height:1.65;margin:var(--space-2) 0 0}
+.notice{background:var(--canvas-card);border:1px solid var(--border-default);border-radius:var(--radius-xs);padding:var(--space-3) var(--space-4);margin:var(--space-3) 0;font-size:var(--text-sm);color:var(--text-secondary)}
+
+/* ── view heads / export / reference ── */
+.viewhead{margin:0 0 var(--space-5)}
+.viewhead h2{font-family:var(--font-display);font-weight:700;font-size:var(--text-2xl);letter-spacing:.02em;text-transform:uppercase;color:var(--text-max);margin:0}
+.viewhead h2:focus{outline:none}
+.viewhead .sub{font-size:var(--text-sm);color:var(--text-secondary);margin:8px 0 0;max-width:60ch}
+.barrow{display:flex;gap:var(--space-2);align-items:center;margin:0 0 var(--space-4);flex-wrap:wrap}
+pre.block{font-family:var(--font-data);font-size:var(--text-sm);color:var(--text-primary);background:var(--canvas-sunken);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:var(--space-4) var(--space-5);white-space:pre-wrap;line-height:1.6;margin:0;overflow-x:auto}
+table.ref{width:100%;border-collapse:collapse;background:var(--canvas-card);border:1px solid var(--border-default);border-radius:var(--radius-md);overflow:hidden;font-size:var(--text-sm);box-shadow:var(--inner-edge)}
+table.ref th,table.ref td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--border-default);vertical-align:top}
+table.ref th{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-tertiary);background:var(--canvas-elevated)}
+table.ref td{color:var(--text-secondary)}
+table.ref td:first-child{color:var(--text-primary)}
+table.ref tr:last-child td{border-bottom:0}
+.ref h3{font-family:var(--font-display);font-weight:700;font-size:var(--text-lg);letter-spacing:.04em;text-transform:uppercase;color:var(--text-primary);margin:var(--space-8) 0 var(--space-3)}
+.ref h3:first-of-type{margin-top:0}
+
+/* ── toasts ── */
+.toaster{position:fixed;bottom:var(--space-5);right:var(--space-5);z-index:var(--z-toast);display:flex;flex-direction:column;gap:var(--space-2);align-items:flex-end}
+.toast{background:var(--canvas-overlay);border:1px solid var(--border-strong);border-left:3px solid var(--accent);color:var(--text-primary);font-family:var(--font-data);font-size:var(--text-sm);border-radius:var(--radius-sm);padding:12px 16px;box-shadow:var(--shadow-2);display:flex;gap:10px;align-items:center;animation:toastin var(--motion-large) var(--ease-emphasized) both}
+.toast .ic{color:var(--accent-text);width:15px;height:15px}
+@keyframes toastin{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+.toast.out{animation:toastout var(--motion-small) var(--ease-standard) forwards}
+@keyframes toastout{to{opacity:0;transform:translateY(6px)}}
+
+/* ── modal ── */
+dialog.replydlg{background:var(--canvas-overlay);color:var(--text-primary);border:1px solid var(--border-strong);border-radius:var(--radius-md);box-shadow:var(--shadow-3);padding:0;width:min(620px,calc(100vw - 32px));max-height:min(78vh,720px)}
+dialog.replydlg::backdrop{background:var(--scrim);backdrop-filter:blur(2px)}
+dialog.replydlg[open]{animation:dlgin var(--motion-large) var(--ease-emphasized)}
+@keyframes dlgin{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
+.dlg-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--border-default)}
+.dlg-head .dt{font-family:var(--font-display);font-weight:700;font-size:16px;letter-spacing:.12em;text-transform:uppercase}
+.dlg-body{padding:var(--space-5);overflow:auto;max-height:52vh}
+.dlg-foot{display:flex;gap:var(--space-2);justify-content:flex-end;padding:var(--space-4) var(--space-5);border-top:1px solid var(--border-default)}
+
+/* ── footer ── */
+footer{border-top:1px solid var(--border-default);padding:var(--space-6) 0 var(--space-12);color:var(--text-tertiary);font-family:var(--font-data);font-size:var(--text-xs);display:flex;gap:var(--space-5);flex-wrap:wrap;letter-spacing:.04em}
+footer a{color:var(--text-secondary);text-decoration:none;border-bottom:1px solid var(--border-default)}
+footer a:hover{color:var(--text-primary);border-bottom-color:var(--border-strong)}
+footer a:focus-visible{outline:none;box-shadow:var(--focus-ring);border-radius:var(--radius-xs)}
+
+@media (max-width:560px){
+  .strip{grid-template-columns:10px 44px minmax(0,1fr)}
+  .strip.lead{grid-template-columns:10px 48px minmax(0,1fr)}
+  .clock{display:none}
+  .brand .wm-sub{display:none}
+  .dataline{gap:var(--space-3)}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  html{scroll-behavior:auto}
+}
 </style>
 </head>
 <body>
-<div class="topbar">
+<a class="skip" href="#main">Skip to board</a>
+
+<header class="cmdbar">
   <div class="row">
-    <div class="brand">
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="4" width="18" height="3.2" rx="1.6" fill="#c0392b"/><rect x="2" y="9.4" width="13" height="3.2" rx="1.6" fill="#c8860d"/><rect x="2" y="14.8" width="8" height="3.2" rx="1.6" fill="#4a7a5e"/></svg>
-      Triage Desk
-    </div>
-    <button class="hamb" id="hamb" aria-label="Menu"><span></span><span></span><span></span></button>
-    <nav class="nav" id="nav">
-      <a data-view="triage" class="active">Triage</a>
-      <a data-view="export">Export</a>
-      <a data-view="reference">Reference</a>
+    <a class="brand" href="#" id="homelink" aria-label="Triage Desk home">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tower"/></svg>
+      <span class="wordmark"><span class="wm-name">Triage Desk</span><span class="wm-sub">Dispatch Board</span></span>
+    </a>
+    <nav class="tabs" aria-label="Views">
+      <button class="tab" data-view="triage" aria-current="page">Triage</button>
+      <button class="tab" data-view="export">Export</button>
+      <button class="tab" data-view="reference">Reference</button>
     </nav>
+    <div class="bar-right">
+      <span class="clock" aria-hidden="true"><span class="zl">LOCAL</span><span id="clock">--:--:--</span></span>
+      <button class="iconbtn" id="themebtn" aria-pressed="false" aria-label="Switch to daylight theme">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sun"/></svg>
+      </button>
+    </div>
   </div>
-</div>
+</header>
 
 <div class="wrap">
-  <header class="mast">
-    <div class="eyebrow">Triage Desk · first-line support</div>
-    <h1>Sort the noise. See what to handle first.</h1>
-    <p class="lede">Paste a messy support inbox and this sorts every message into a structured ticket: a <b>category</b>, a <b>priority</b>, the <b>team</b> it routes to, an <b>SLA breach time</b>, and a ready first-response reply. Rule-based, so you can see why each call was made.</p>
+  <header class="mast" id="mast">
+    <p class="eyebrow">Dispatch · first-line support</p>
+    <h1>Sort the noise.<br/>Land <span class="amber">what matters</span> first.</h1>
+    <p class="lede">Paste a messy support inbox. Every message becomes a flight strip: a <b>category</b>, a <b>priority</b>, the <b>team</b> it routes to, a live <b>SLA countdown</b>, and a ready first reply. Rule-based — you can see why every call was made.</p>
   </header>
-  <main id="main"></main>
+  <main id="main" tabindex="-1"></main>
   <footer>
-    <span class="src-note">Rule-based · runs in your browser</span>
+    <span>Rule-based · runs in your browser</span>
     <span>Built by Kabelo Theko</span>
     <a href="https://github.com/Kabelo-Theko/ticket-triage" target="_blank" rel="noopener noreferrer">Source on GitHub</a>
   </footer>
 </div>
 
-<script>
-/* ---- Feature 1: store list ---- */
-const STORES=["Sandton City","Mall of Africa","Menlyn Park","Gateway","Canal Walk","V&A Waterfront","Eastgate","Pavilion"];
+<div class="toaster" id="toaster"></div>
+<div class="sr-only" role="status" aria-live="polite" id="live"></div>
 
-/* ---- classification (mirrors ticket_triage/classifier.py) ---- */
-const CATEGORY_SIGNALS = [
-  ["Security", ["virus","malware","phishing","suspicious link","suspicious email","hacked","ransomware"]],
-  ["Account & Access", ["password","reset","locked out","can't log in","cannot log in","log in","login","sign in","mfa","2fa","access denied","permission","new starter","onboard"]],
-  ["Point of Sale", ["pos","point of sale","till","card machine","payment terminal","checkout","speedpoint","pay cash"]],
-  ["Printer", ["printer","printing","toner","paper jam","scanner","scan to email"]],
-  ["Email", ["outlook","mailbox","exchange","spam","can't send","cannot send","email","e-mail"]],
-  ["Network", ["wifi","wi-fi","internet","network","vpn","dns","dhcp","no connection","offline","no internet","wireless"]],
-  ["Software", ["install","update","licence","license","application","software","excel","word","teams","crash","crashing","error message"]],
-  ["Hardware", ["laptop","cracked screen","black screen","keyboard","mouse","monitor","battery","charger","won't turn on","wont turn on","blue screen","overheating","no power"]],
+<dialog class="replydlg" id="replydlg" aria-labelledby="dlgtitle">
+  <div class="dlg-head">
+    <span class="dt" id="dlgtitle">First response</span>
+    <button class="iconbtn" id="dlgclose" aria-label="Close dialog"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-x"/></svg></button>
+  </div>
+  <div class="dlg-body"><pre class="block" id="dlgpre"></pre></div>
+  <div class="dlg-foot">
+    <button class="btn btn-ghost btn-sm" id="dlgcancel">Close</button>
+    <button class="btn btn-primary btn-sm" id="dlgcopy"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-copy"/></svg>Copy reply</button>
+  </div>
+</dialog>
+
+<!-- ── Custom icon system: 24px grid · 1.75 stroke · squared terminals ── -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-tower" viewBox="0 0 24 24"><path d="M12 2v3M7 5h10l-1.5 5h-7L7 5zM10.5 10 9 22h6l-1.5-12M6.5 22h11"/></symbol>
+    <symbol id="i-strip" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10"/><path d="M7 7v10M7 10.5h.01M7 13.5h.01" stroke-dasharray="0 0"/><path d="M10 10.5h8M10 13.5h5"/></symbol>
+    <symbol id="i-radar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6.5-6.5M15 9.5h.01"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24"><path d="M4 18h6c3 0 3-4 6-4h4M16 10l4 4-4 4M4 6h5"/></symbol>
+    <symbol id="i-export" viewBox="0 0 24 24"><path d="M12 15V4M8.5 7.5 12 4l3.5 3.5M5 12v8h14v-8"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 4h7v16H4zM13 4h7v16h-7M7 8h1.5M7 11h1.5M16 8h1.5M16 11h1.5"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11"/><path d="M5 15V4h11"/></symbol>
+    <symbol id="i-radio" viewBox="0 0 24 24"><path d="M12 15v6M9.5 12.5a2.5 2.5 0 1 1 5 0 2.5 2.5 0 0 1-5 0zM6.8 7.8a6.6 6.6 0 0 0 0 9.4M17.2 7.8a6.6 6.6 0 0 1 0 9.4M4.2 5.2a10.3 10.3 0 0 0 0 14.6M19.8 5.2a10.3 10.3 0 0 1 0 14.6"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3v6M12 15v6M3 12h6M15 12h6M12 9l3 3-3 3-3-3 3-3z"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2.5 20h19L12 3zM12 9.5V14M12 16.8v.01"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21c-4-4.2-6.5-7.6-6.5-11a6.5 6.5 0 0 1 13 0c0 3.4-2.5 6.8-6.5 11zM9.8 10a2.2 2.2 0 1 0 4.4 0 2.2 2.2 0 0 0-4.4 0z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.7M12 18.8v2.7M2.5 12h2.7M18.8 12h2.7M5 5l1.9 1.9M17.1 17.1 19 19M19 5l-1.9 1.9M6.9 17.1 5 19"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.5 10 18 19.5 6.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M5.5 5.5l13 13M18.5 5.5l-13 13"/></symbol>
+    <symbol id="i-wire" viewBox="0 0 24 24"><path d="M3 7h18M3 12h13M3 17h9"/></symbol>
+  </defs>
+</svg>
+
+<script>
+/* ════════ engine (mirrors ticket_triage/classifier.py — logic unchanged) ════════ */
+const STORES=["Sandton City","Mall of Africa","Menlyn Park","Gateway","Canal Walk","V&A Waterfront","Eastgate","Pavilion"];
+const CATEGORY_SIGNALS=[
+  ["Security",["virus","malware","phishing","suspicious link","suspicious email","hacked","ransomware"]],
+  ["Account & Access",["password","reset","locked out","can't log in","cannot log in","log in","login","sign in","mfa","2fa","access denied","permission","new starter","onboard"]],
+  ["Point of Sale",["pos","point of sale","till","card machine","payment terminal","checkout","speedpoint","pay cash"]],
+  ["Printer",["printer","printing","toner","paper jam","scanner","scan to email"]],
+  ["Email",["outlook","mailbox","exchange","spam","can't send","cannot send","email","e-mail"]],
+  ["Network",["wifi","wi-fi","internet","network","vpn","dns","dhcp","no connection","offline","no internet","wireless"]],
+  ["Software",["install","update","licence","license","application","software","excel","word","teams","crash","crashing","error message"]],
+  ["Hardware",["laptop","cracked screen","black screen","keyboard","mouse","monitor","battery","charger","won't turn on","wont turn on","blue screen","overheating","no power"]],
 ];
-const HIGH_SIGNALS = ["down","can't work","cannot work","whole store","all tills","store is","nobody can","everyone","urgent","asap","trading","lost data","ransomware","hacked","card machine","pos down","queue is growing","pay cash","can only pay"];
-const MEDIUM_SIGNALS = ["slow","keeps","again","intermittent","one user","can't print","cannot print","can't send","cannot send","every now and then"];
-const FIRST_STEPS = {
+const HIGH_SIGNALS=["down","can't work","cannot work","whole store","all tills","store is","nobody can","everyone","urgent","asap","trading","lost data","ransomware","hacked","card machine","pos down","queue is growing","pay cash","can only pay"];
+const MEDIUM_SIGNALS=["slow","keeps","again","intermittent","one user","can't print","cannot print","can't send","cannot send","every now and then"];
+const FIRST_STEPS={
   "Account & Access":"Confirm the exact username and error, then check the account in Active Directory for lockout or expiry before resetting.",
   "Point of Sale":"Check whether the till has network and power, confirm if other tills are affected, and treat it as trade-blocking until proven otherwise.",
   "Printer":"Confirm the printer is on and online, check the queue for a stuck job, and verify the user is printing to the right device.",
@@ -184,37 +422,19 @@ const FIRST_STEPS = {
   "Software":"Confirm the exact application and error text, check whether it affects one user or many, and verify version and pending updates.",
   "General":"Acknowledge the user, capture the exact symptom and how many people it affects, then reproduce before changing anything.",
 };
-/* routing + SLA */
-const ROUTING = {
-  "Security":"Security Team: escalate immediately",
-  "Account & Access":"Identity & Access Team",
-  "Point of Sale":"Retail Systems / POS Support",
-  "Printer":"Hardware / Field Support",
-  "Email":"Microsoft 365 Team",
-  "Network":"Network Team",
-  "Software":"Application Support",
-  "Hardware":"Hardware / Field Support",
-  "General":"Service Desk",
+const ROUTING={
+  "Security":"Security Team: escalate immediately","Account & Access":"Identity & Access Team",
+  "Point of Sale":"Retail Systems / POS Support","Printer":"Hardware / Field Support",
+  "Email":"Microsoft 365 Team","Network":"Network Team","Software":"Application Support",
+  "Hardware":"Hardware / Field Support","General":"Service Desk",
 };
-const SLA_HOURS = {High:4, Medium:8, Low:72};
-const ORDER = {High:0, Medium:1, Low:2};
-
-const norm = t => t.trim().toLowerCase().replace(/\s+/g," ");
+const SLA_HOURS={High:4,Medium:8,Low:72};
+const ORDER={High:0,Medium:1,Low:2};
+const norm=t=>t.trim().toLowerCase().replace(/\s+/g," ");
 function matchCategory(t){for(const [c,sigs] of CATEGORY_SIGNALS){if(sigs.some(s=>t.includes(s)))return c;}return "General";}
 function matchPriority(t){if(HIGH_SIGNALS.some(s=>t.includes(s)))return "High";if(MEDIUM_SIGNALS.some(s=>t.includes(s)))return "Medium";return "Low";}
 function summarise(raw,limit=80){let f=raw.trim().split(/[.!?\n]/)[0].trim();if(f.length>limit)f=f.slice(0,limit-1).trimEnd()+"…";return f?f.charAt(0).toUpperCase()+f.slice(1):"No detail provided";}
-
-/* Feature 1: detect store from raw message text */
-function matchStore(raw){
-  const lower=raw.toLowerCase();
-  for(const s of STORES){
-    /* also match on first word of multi-word store names (e.g. "Sandton" -> "Sandton City") */
-    const firstWord=s.split(" ")[0].toLowerCase();
-    if(lower.includes(s.toLowerCase())||lower.includes(firstWord))return s;
-  }
-  return "";
-}
-
+function matchStore(raw){const lower=raw.toLowerCase();for(const s of STORES){const firstWord=s.split(" ")[0].toLowerCase();if(lower.includes(s.toLowerCase())||lower.includes(firstWord))return s;}return "";}
 function classify(messages){
   const list=messages.filter(m=>m.trim());
   const tickets=list.map((raw,i)=>{const t=norm(raw);const category=matchCategory(t);const priority=matchPriority(t);const store=matchStore(raw);
@@ -222,32 +442,35 @@ function classify(messages){
   tickets.sort((a,b)=>ORDER[a.priority]-ORDER[b.priority]);
   return tickets;
 }
-
-/* SLA breach time from a base Date + hours */
-function breachText(base, hours){
-  const b=new Date(base.getTime()+hours*3600*1000);
+function breachDate(base,hours){return new Date(base.getTime()+hours*3600*1000);}
+function breachText(base,hours){
+  const b=breachDate(base,hours);
   const sameDay=(d1,d2)=>d1.toDateString()===d2.toDateString();
-  const today=new Date(base); const tomorrow=new Date(base.getTime()+86400000);
+  const today=new Date(base);const tomorrow=new Date(base.getTime()+86400000);
   const hhmm=b.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
   let day;
-  if(sameDay(b,today))day="today";
-  else if(sameDay(b,tomorrow))day="tomorrow";
+  if(sameDay(b,today))day="today";else if(sameDay(b,tomorrow))day="tomorrow";
   else day=b.toLocaleDateString("en-GB",{weekday:"short",day:"2-digit",month:"short"});
   return `${hhmm} ${day}`;
 }
+function remainText(b){
+  const ms=b.getTime()-Date.now();
+  const late=ms<0;const abs=Math.abs(ms);
+  const h=Math.floor(abs/3600000),m=Math.floor((abs%3600000)/60000);
+  const t=h>0?`${h}h ${String(m).padStart(2,"0")}m`:`${m}m`;
+  return late?{cls:"breach-late",txt:`BREACHED ${t} ago`}:{cls:ms<3600000?"breach-soon":"",txt:`T−${t}`};
+}
 function triageBase(){
-  const v=$("#ttime")?.value;
+  const v=document.querySelector("#ttime")?.value;
   const base=new Date();
   if(v){const [h,m]=v.split(":").map(Number);base.setHours(h,m,0,0);}
   return base;
 }
-
-function firstResponse(t, base){
-  const breach=breachText(base, SLA_HOURS[t.priority]);
+function firstResponse(t,base){
+  const breach=breachText(base,SLA_HOURS[t.priority]);
   return `Subject: [${t.id}] We've logged your request\n\nHi there,\n\nThanks for reaching out. We've logged your request as ${t.id}.\n\n  Issue:    ${t.summary}\n  Priority: ${t.priority}\n  Team:     ${t.team}\n  Target:   resolved by ${breach} (${SLA_HOURS[t.priority]}h SLA)\n\nWe'll be in touch as we work it. If this becomes urgent, reply to this email or call the service desk.\n\nIT Support`;
 }
-
-const SAMPLE = `The till at the front counter is down and the queue is growing, nobody can check customers out
+const SAMPLE=`The till at the front counter is down and the queue is growing, nobody can check customers out
 Hi, I forgot my password again and I'm locked out of my laptop
 Outlook keeps saying it can't send and the mail just sits in the outbox
 The wifi in the stockroom is really slow today, it keeps dropping
@@ -258,213 +481,336 @@ Teams crashes every time I try to share my screen in a meeting
 Can someone set up the new starter in receiving with an email account and login
 The card machine is not connecting and customers can only pay cash right now`;
 
-/* ---- Feature 5: AI model label helper ---- */
-function aiModelLabel(){const s=document.querySelector('#aimodel');return s?s.options[s.selectedIndex].text.replace(/\s*\(.*\)\s*/,'').trim():'AI';}
+/* ════════ shell: theme · clock · toasts · dialog · live region ════════ */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+const state={view:"triage",tickets:[],inputCache:""};
+const main=$("#main");
 
-/* ---- state + nav ---- */
-const state = {view:"triage", tickets:[]};
-const $ = s => document.querySelector(s);
-const main = $("#main");
-const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
-const tagClass = p => p.toLowerCase();
-const tagText = p => p==="Medium"?"Med":p;
+const themeBtn=$("#themebtn");
+function applyTheme(t){
+  document.documentElement.dataset.theme=t;
+  const day=t==="day";
+  themeBtn.setAttribute("aria-pressed",String(day));
+  themeBtn.setAttribute("aria-label",day?"Switch to night ops theme":"Switch to daylight theme");
+  themeBtn.innerHTML=`<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-${day?"moon":"sun"}"/></svg>`;
+  try{localStorage.setItem("td-theme",t);}catch(e){}
+}
+themeBtn.addEventListener("click",()=>applyTheme(document.documentElement.dataset.theme==="day"?"night":"day"));
+try{const saved=localStorage.getItem("td-theme");if(saved)applyTheme(saved);}catch(e){}
 
-function setView(v){state.view=v;document.querySelectorAll(".nav a").forEach(a=>a.classList.toggle("active",a.dataset.view===v));$("#nav").classList.remove("open");render();}
-$("#hamb").addEventListener("click",()=>$("#nav").classList.toggle("open"));
-document.querySelectorAll(".nav a").forEach(a=>a.addEventListener("click",()=>setView(a.dataset.view)));
+setInterval(()=>{$("#clock").textContent=new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"});},1000);
 
-/* ---- triage view ---- */
+function toast(msg){
+  const el=document.createElement("div");
+  el.className="toast";
+  el.innerHTML=`<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg>${esc(msg)}`;
+  $("#toaster").appendChild(el);
+  announce(msg);
+  setTimeout(()=>{el.classList.add("out");setTimeout(()=>el.remove(),220);},2400);
+}
+function announce(msg){$("#live").textContent="";requestAnimationFrame(()=>{$("#live").textContent=msg;});}
+
+const dlg=$("#replydlg");let dlgText="";
+function openReply(t){
+  dlgText=firstResponse(t,triageBase());
+  $("#dlgtitle").textContent=`First response · ${t.id}`;
+  $("#dlgpre").textContent=dlgText;
+  dlg.showModal();
+}
+$("#dlgclose").addEventListener("click",()=>dlg.close());
+$("#dlgcancel").addEventListener("click",()=>dlg.close());
+$("#dlgcopy").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(dlgText);toast("Reply copied to clipboard");}catch(e){toast("Copy blocked — select the text manually");}dlg.close();});
+dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close();});
+
+function aiModelLabel(){const s=$("#aimodel");return s?s.options[s.selectedIndex].text.replace(/\s*\(.*\)\s*/,"").trim():"AI";}
+const tagClass=p=>p==="High"?"high":p==="Medium"?"med":"low";
+const tagText=p=>p==="Medium"?"MED":p.toUpperCase();
+
+/* ════════ navigation ════════ */
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+$("#homelink").addEventListener("click",e=>{e.preventDefault();setView("triage");});
+function setView(v){
+  state.view=v;
+  document.querySelectorAll(".tab").forEach(b=>{
+    if(b.dataset.view===v)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current");
+  });
+  $("#mast").style.display=v==="triage"?"":"none";
+  render();
+  const h=main.querySelector("[data-viewtitle]");
+  if(h){h.setAttribute("tabindex","-1");h.focus({preventScroll:false});}
+}
+
+/* ════════ triage view ════════ */
 function triageView(){
   const now=new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
-  main.innerHTML=`<div class="view enter"><div class="desk">
-    <section class="panel" aria-label="Message input">
-      <h2>Raw messages</h2>
-      <p class="hint">One message per line, the way a user would actually report it.</p>
-      <textarea id="input" spellcheck="false" placeholder="the till is down and the queue is growing
+  main.innerHTML=`<div class="view reveal"><div class="board">
+    <section class="console" aria-label="Raw traffic input">
+      <div class="console-head">
+        <span class="ct"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wire"/></svg>Raw traffic</span>
+        <span class="wirecount" id="wirecount">0 messages</span>
+      </div>
+      <div class="console-body">
+        <label class="fld" for="input">Messages · one per line, as reported</label>
+        <textarea id="input" spellcheck="false" placeholder="the till is down and the queue is growing
 i forgot my password again
-outlook keeps saying it can't send"></textarea>
-      <label class="fld" for="ttime">Triage time (for SLA countdown)</label>
-      <input type="time" id="ttime" value="${now}" />
-      <label class="fld" for="aimodel">AI model · for "Re-check with AI"</label>
-      <select class="aimodel" id="aimodel"><option value="flash">DeepSeek Flash</option><option value="pro">DeepSeek Pro</option><option value="minimax">MiniMax M3</option></select>
-      <div class="row-btns">
-        <button class="btn btn-primary" id="run">Triage queue</button>
-        <button class="btn btn-ghost" id="sample">Load sample</button>
-        <button class="btn btn-ghost" id="clear">Clear</button>
+outlook keeps saying it can't send">${esc(state.inputCache)}</textarea>
+        <label class="fld" for="ttime">Triage time · anchors the SLA countdown</label>
+        <input type="time" id="ttime" value="${now}" />
+        <label class="fld" for="aimodel">AI model · for re-checks and the queue brief</label>
+        <select id="aimodel">
+          <option value="flash">DeepSeek Flash</option>
+          <option value="pro">DeepSeek Pro</option>
+          <option value="minimax">MiniMax M3</option>
+        </select>
+        <div class="row-btns">
+          <button class="btn btn-primary" id="run"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-strip"/></svg>Sequence queue</button>
+          <button class="btn btn-ghost" id="sample">Load sample</button>
+          <button class="btn btn-ghost" id="clear">Clear</button>
+        </div>
       </div>
       <div class="legend">
         <div class="lh">How priority is decided</div>
-        <div class="legend-item"><span class="tag high">High</span> trade blocked, or many people stuck · SLA 4h</div>
-        <div class="legend-item"><span class="tag medium">Med</span> recurring, or single-person nuisance · SLA 8h</div>
-        <div class="legend-item"><span class="tag low">Low</span> everything else · SLA 3 days</div>
+        <div class="legend-item"><span class="holder high">High</span>trade blocked, or many people stuck · SLA 4h</div>
+        <div class="legend-item"><span class="holder med">Med</span>recurring, or single-person nuisance · SLA 8h</div>
+        <div class="legend-item"><span class="holder low">Low</span>everything else · SLA 3 days</div>
       </div>
     </section>
-    <section class="results" id="results">${resultsHTML()}</section>
+    <section class="queue" id="results" aria-label="Sequenced queue">${resultsHTML()}</section>
   </div></div>`;
   wireTriage();
 }
-function resultsHTML(){
-  if(!state.tickets.length){
-    return `<div class="empty enter"><h3>Your inbox, sorted by what hurts most.</h3><p>Paste messages on the left and triage. Each ticket gets a category, priority, the team it routes to, an SLA breach time, and a ready reply.</p><button class="btn btn-primary" id="sample2">Load a sample inbox</button></div>`;
+
+function emptyHTML(){
+  return `<div class="empty reveal">
+    <svg class="radar" viewBox="0 0 150 150" role="img" aria-label="Radar screen scanning, no contacts yet">
+      <circle class="grid" cx="75" cy="75" r="70"/><circle class="grid" cx="75" cy="75" r="46"/><circle class="grid" cx="75" cy="75" r="22"/>
+      <line class="grid" x1="75" y1="5" x2="75" y2="145"/><line class="grid" x1="5" y1="75" x2="145" y2="75"/>
+      <path class="sweepfan" d="M75 75 L75 5 A70 70 0 0 1 117 19 Z"/>
+      <line class="sweepline" x1="75" y1="75" x2="75" y2="5"/>
+      <circle class="blip" cx="103" cy="52" r="3"/><circle class="blip b2" cx="52" cy="98" r="2.5"/><circle class="blip b3" cx="94" cy="103" r="2"/>
+    </svg>
+    <div>
+      <h3>No traffic on the board</h3>
+      <p>Paste raw messages on the left — the way people actually report problems — and sequence them.</p>
+      <p>Each one lands as a strip with a category, priority, routing team, live SLA countdown and a ready first reply. The most urgent ticket is called out so you never scan for it.</p>
+      <div class="cta"><button class="btn btn-primary" id="sample2">Load a sample inbox</button></div>
+    </div>
+  </div>`;
+}
+
+function skeletonHTML(){
+  let s=`<p class="seqnote"><span class="spin" aria-hidden="true"></span>Sequencing traffic…</p>`;
+  for(let i=0;i<3;i++){
+    s+=`<div class="skel" aria-hidden="true"><div class="rail"></div><div class="hb"></div><div class="lines"><div class="ln w60"></div><div class="ln w85"></div><div class="ln w40"></div></div></div>`;
   }
+  return `<div>${s}</div>`;
+}
+
+function resultsHTML(){
+  if(!state.tickets.length)return emptyHTML();
   const base=triageBase();
-  const counts={High:0,Medium:0,Low:0}; const byCat={};
+  const counts={High:0,Medium:0,Low:0};const byCat={};
   state.tickets.forEach(t=>{counts[t.priority]++;byCat[t.category]=(byCat[t.category]||0)+1;});
-
-  /* Feature 2: site-wide (store+category) major incident detection */
   const bySiteCat={};
-  state.tickets.forEach(t=>{if(t.store){const key=`${t.store}||${t.category}`;bySiteCat[key]=(bySiteCat[key]||[]);bySiteCat[key].push(t);}});
+  state.tickets.forEach(t=>{if(t.store){const key=`${t.store}||${t.category}`;bySiteCat[key]=bySiteCat[key]||[];bySiteCat[key].push(t);}});
   const siteIncidents=Object.entries(bySiteCat).filter(([,arr])=>arr.length>=2);
-
   const mi=Object.entries(byCat).filter(([,n])=>n>=3);
-  let html=`<div class="tally enter">
-    <span class="count"><span class="tag high">High</span><b>${counts.High}</b></span>
-    <span class="count"><span class="tag medium">Med</span><b>${counts.Medium}</b></span>
-    <span class="count"><span class="tag low">Low</span><b>${counts.Low}</b></span>
-    <span class="actions"><button class="btn btn-ghost" id="brief">AI queue brief</button><button class="btn btn-ghost" id="goexport">Export</button></span>
+
+  let html=`<div class="tally deal" style="--i:0" role="group" aria-label="Queue tally">
+    <span class="tcount high"><span class="led" aria-hidden="true"></span><span class="tk">High</span><span class="tv">${String(counts.High).padStart(2,"0")}</span></span>
+    <span class="tcount med"><span class="led" aria-hidden="true"></span><span class="tk">Med</span><span class="tv">${String(counts.Medium).padStart(2,"0")}</span></span>
+    <span class="tcount low"><span class="led" aria-hidden="true"></span><span class="tk">Low</span><span class="tv">${String(counts.Low).padStart(2,"0")}</span></span>
+    <span class="actions">
+      <button class="btn btn-ghost btn-sm" id="brief"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-spark"/></svg>AI queue brief</button>
+      <button class="btn btn-ghost btn-sm" id="goexport"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-export"/></svg>Export</button>
+    </span>
   </div>
   <div id="briefout"></div>`;
 
-  /* Feature 2: render site-wide banners first (stronger signal) */
   siteIncidents.forEach(([key,arr])=>{
     const [store,category]=key.split("||");
-    html+=`<div class="mi-banner mi-site"><b>Site-wide P1 risk:</b> ${arr.length} ${esc(category)} tickets at ${esc(store)}. Open a major incident for this site before working them one by one.</div>`;
+    html+=`<div class="banner site deal" style="--i:1" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-alert"/></svg><span><b>Site-wide P1 risk:</b> ${arr.length} ${esc(category)} tickets at ${esc(store)}. Open a major incident for this site before working them one by one.</span></div>`;
   });
+  if(mi.length){
+    html+=`<div class="banner cat deal" style="--i:2"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-alert"/></svg><span><b>Possible major incident:</b> ${mi.map(([c,n])=>`${n} tickets in ${esc(c)}`).join(", ")}. Consider opening a major incident before working these one by one.</span></div>`;
+  }
 
-  /* Existing category-level banner (softer secondary signal) */
-  if(mi.length){html+=`<div class="mi-banner"><b>Possible major incident:</b> ${mi.map(([c,n])=>`${n} tickets in ${esc(c)}`).join(", ")}. Consider opening a major incident before working these one by one.</div>`;}
-
-  const lead=state.tickets[0], rest=state.tickets.slice(1);
-  html+=`<p class="leadlabel">${lead.priority==="High"?"Handle first":"Top of the queue"}</p>`+cardHTML(lead,base,true,30);
-  if(rest.length){html+=`<p class="group-label">Then, in order</p>`+rest.map((t,i)=>cardHTML(t,base,false,70+i*40)).join("");}
+  const lead=state.tickets[0],rest=state.tickets.slice(1);
+  html+=`<div class="bay first deal" style="--i:2"><span class="bnum">BAY 01</span><span class="bname">${lead.priority==="High"?"Handle first":"Top of the queue"}</span><span class="rule"></span></div>`;
+  html+=stripHTML(lead,base,true,3);
+  if(rest.length){
+    html+=`<div class="bay deal" style="--i:${4+0}"><span class="bnum">BAY 02</span><span class="bname">Then, in sequence</span><span class="rule"></span></div>`;
+    html+=rest.map((t,i)=>stripHTML(t,base,false,5+i)).join("");
+  }
   return html;
 }
 
-/* Feature 3: determine env for net-doctor link */
-function diagEnv(category){
-  const posRelated=["Point of Sale","Hardware","Printer"];
-  return posRelated.includes(category)?"pos":"office";
-}
+function diagEnv(category){const posRelated=["Point of Sale","Hardware","Printer"];return posRelated.includes(category)?"pos":"office";}
 
-function cardHTML(t,base,lead,delay){
+function stripHTML(t,base,lead,idx){
+  const bDate=breachDate(base,SLA_HOURS[t.priority]);
   const breach=breachText(base,SLA_HOURS[t.priority]);
-
-  /* Feature 1: store chip in meta row */
-  const storeChip=t.store?`<span class="chip">${esc(t.store)}</span>`:"";
-
-  /* Feature 5: AI reasoning receipt under summary */
+  const rem=remainText(bDate);
+  const storeChip=t.store?`<span class="chip"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pin"/></svg>${esc(t.store)}</span>`:"";
   const receiptLine=t.ai?`<div class="receipt">Reasoning receipt: model ${esc(t.aimodel||"AI")} · task classify · ${esc(t.aitime||"")}</div>`:"";
-
-  /* Feature 3: Run diagnostics link */
   const diagUrl=`https://net-doctor-nu.vercel.app/?store=${encodeURIComponent(t.store||"")}&os=win&env=${encodeURIComponent(diagEnv(t.category))}&symptom=${encodeURIComponent(t.category)}`;
-  const diagLink=`<a class="btn btn-ghost" target="_blank" rel="noopener noreferrer" href="${diagUrl}">Run diagnostics</a>`;
-
-  /* Feature 4: WhatsApp dispatch link for High priority only */
+  const diagLink=`<a class="btn btn-ghost btn-sm" target="_blank" rel="noopener noreferrer" href="${diagUrl}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-radar"/></svg>Run diagnostics</a>`;
   const waText=`P1${t.store?" "+t.store:""}: ${t.category}. ${t.summary}. Ticket ${t.id}, SLA ${SLA_HOURS[t.priority]}h. Please acknowledge and respond.`;
-  const waLink=t.priority==="High"?`<a class="btn btn-ghost" target="_blank" rel="noopener noreferrer" href="https://wa.me/?text=${encodeURIComponent(waText)}">Dispatch (WhatsApp)</a>`:"";
-
-  /* Re-check with AI button (existing logic) */
-  const recheckBtn=(t.category==="General"&&!t.ai)?`<button class="btn btn-ghost airecheck" data-id="${t.id}">Re-check with AI</button>`:"";
-
-  return `<article class="card ${lead?'lead '+tagClass(t.priority):''} enter" style="animation-delay:${delay}ms">
-    <div class="meta"><span class="tag ${tagClass(t.priority)}">${tagText(t.priority)}</span><span class="chip">${esc(t.category)}</span>${storeChip}<span class="tid">${t.id}</span>${t.ai?'<span class="chip aichip">AI-assisted</span>':''}</div>
-    <p class="summary">${esc(t.summary)}</p>
-    ${receiptLine}
-    <div class="rowline"><span><span class="k">route</span> ${esc(t.team)}</span><span><span class="k">SLA</span> ${SLA_HOURS[t.priority]}h · breaches ${breach}</span></div>
-    <p class="step"><span class="sl">First step</span>${esc(t.first_step)}</p>
-    <div class="cardact"><button class="btn btn-ghost reply" data-id="${t.id}">Copy first response</button>${recheckBtn}${diagLink}${waLink}</div>
+  const waLink=t.priority==="High"?`<a class="btn btn-ghost btn-sm" target="_blank" rel="noopener noreferrer" href="https://wa.me/?text=${encodeURIComponent(waText)}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-radio"/></svg>Dispatch (WhatsApp)</a>`:"";
+  const recheckBtn=(t.category==="General"&&!t.ai)?`<button class="btn btn-ghost btn-sm airecheck" data-id="${t.id}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-spark"/></svg>Re-check with AI</button>`:"";
+  const beacon=lead?`<span class="beaconlabel"><span class="beacon" aria-hidden="true"></span>${t.priority==="High"?"Handle first":"Top of queue"}</span>`:"";
+  return `<article class="strip ${tagClass(t.priority)} ${lead?"lead":""} deal" style="--i:${idx}" aria-label="Ticket ${t.id}, priority ${t.priority}">
+    <div class="rail" aria-hidden="true"></div>
+    <div class="holderblock" aria-hidden="true">${tagText(t.priority)}</div>
+    <div class="body">
+      <div class="meta">${beacon}<span class="sr-only">Priority ${t.priority}.</span><span class="chip">${esc(t.category)}</span>${storeChip}<span class="tid">${t.id}</span>${t.ai?'<span class="chip aichip">AI-assisted</span>':""}</div>
+      <p class="summary">${esc(t.summary)}</p>
+      ${receiptLine}
+      <div class="dataline">
+        <span><span class="k">Route</span>${esc(t.team)}</span>
+        <span><span class="k">SLA</span>${SLA_HOURS[t.priority]}h · breaches ${breach}</span>
+        <span class="${rem.cls}" data-breach="${bDate.getTime()}"><span class="k">Countdown</span>${rem.txt}</span>
+      </div>
+      <p class="firststep"><span class="sl">First step</span>${esc(t.first_step)}</p>
+      <div class="stripact">
+        <button class="btn btn-ghost btn-sm reply" data-id="${t.id}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-copy"/></svg>First response</button>
+        ${recheckBtn}${diagLink}${waLink}
+      </div>
+    </div>
   </article>`;
 }
+
+/* live SLA countdown refresh (30s) */
+setInterval(()=>{
+  document.querySelectorAll("[data-breach]").forEach(el=>{
+    const rem=remainText(new Date(Number(el.dataset.breach)));
+    el.className=rem.cls;el.dataset.breach=el.dataset.breach;
+    el.innerHTML=`<span class="k">Countdown</span>${rem.txt}`;
+  });
+},30000);
+
 function wireTriage(){
-  const input=$("#input"), results=$("#results");
-  const run=()=>{state.tickets=classify(input.value.split("\n"));results.innerHTML=resultsHTML();wireResults();};
-  const loadSample=()=>{input.value=SAMPLE;run();};
+  const input=$("#input"),results=$("#results"),wirecount=$("#wirecount");
+  const countMsgs=()=>{const n=input.value.split("\n").filter(l=>l.trim()).length;wirecount.textContent=`${n} message${n===1?"":"s"}`;};
+  countMsgs();
+  input.addEventListener("input",()=>{state.inputCache=input.value;countMsgs();});
+  input.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();run();}});
+
+  const run=()=>{
+    const msgs=input.value.split("\n");
+    if(!msgs.some(m=>m.trim())){announce("Nothing to sequence — the wire is empty");input.focus();return;}
+    results.innerHTML=skeletonHTML();
+    setTimeout(()=>{
+      state.tickets=classify(msgs);
+      results.innerHTML=resultsHTML();
+      wireResults();
+      const c={High:0,Medium:0,Low:0};state.tickets.forEach(t=>c[t.priority]++);
+      announce(`${state.tickets.length} tickets sequenced. ${c.High} high, ${c.Medium} medium, ${c.Low} low.`);
+    },360);
+  };
+  const loadSample=()=>{input.value=SAMPLE;state.inputCache=SAMPLE;countMsgs();run();};
   $("#run").addEventListener("click",run);
   $("#sample").addEventListener("click",loadSample);
-  $("#clear").addEventListener("click",()=>{input.value="";state.tickets=[];results.innerHTML=resultsHTML();wireResults();});
+  $("#clear").addEventListener("click",()=>{input.value="";state.inputCache="";countMsgs();state.tickets=[];results.innerHTML=resultsHTML();wireResults();input.focus();});
   $("#ttime").addEventListener("change",()=>{if(state.tickets.length){results.innerHTML=resultsHTML();wireResults();}});
   wireResults();
+
   function wireResults(){
-    const s2=$("#sample2"); if(s2)s2.addEventListener("click",loadSample);
-    const ge=$("#goexport"); if(ge)ge.addEventListener("click",()=>setView("export"));
-    const bf=$("#brief"); if(bf)bf.addEventListener("click",async()=>{
-      const bo=$("#briefout"); bf.textContent="Briefing…";
+    const s2=$("#sample2");if(s2)s2.addEventListener("click",loadSample);
+    const ge=$("#goexport");if(ge)ge.addEventListener("click",()=>setView("export"));
+    const bf=$("#brief");if(bf)bf.addEventListener("click",async()=>{
+      const bo=$("#briefout");
+      bf.setAttribute("aria-busy","true");
+      bf.innerHTML=`<span class="spin" aria-hidden="true"></span>Briefing…`;
       try{
         const tk=state.tickets.map(t=>({priority:t.priority,category:t.category,summary:t.summary}));
         const r=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({task:"brief",tickets:tk,model:($("#aimodel")?.value||"flash")})});
-        if(!r.ok) throw 0; const d=await r.json();
-        /* Feature 5: reasoning receipt on AI queue brief */
-        const briefLabel=aiModelLabel();
-        const briefTime=new Date().toLocaleString('en-GB');
-        const briefReceipt=`<div class="receipt">Reasoning receipt: model ${esc(briefLabel)} · task brief · ${esc(briefTime)}</div>`;
-        bo.innerHTML=`<div class="card briefcard"><div class="meta"><span class="chip aichip">AI queue brief</span></div><p class="briefbody">${esc(d.brief||"").replace(/\n/g,"<br>")}</p>${briefReceipt}<div class="cardact"><button class="btn btn-ghost" id="copybrief">Copy brief</button></div></div>`;
-        bf.textContent="AI queue brief";
-        const cb=$("#copybrief"); if(cb)cb.addEventListener("click",async()=>{await navigator.clipboard.writeText(d.brief||"");cb.textContent="Copied";setTimeout(()=>cb.textContent="Copy brief",1400);});
-      }catch(e){ bf.textContent="AI queue brief"; bo.innerHTML=`<div class="card"><p class="briefbody" style="color:var(--ink-mute)">The AI queue brief needs the AI backend (set NVIDIA_API_KEY in Vercel). Your triaged queue below works without it.</p></div>`; }
+        if(!r.ok)throw 0;const d=await r.json();
+        const briefReceipt=`<div class="receipt">Reasoning receipt: model ${esc(aiModelLabel())} · task brief · ${esc(new Date().toLocaleString("en-GB"))}</div>`;
+        bo.innerHTML=`<div class="aibrief reveal"><div class="meta"><span class="chip aichip"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-spark"/></svg>AI queue brief</span></div><p class="briefbody">${esc(d.brief||"").replace(/\n/g,"<br>")}</p>${briefReceipt}<div class="stripact"><button class="btn btn-ghost btn-sm" id="copybrief"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-copy"/></svg>Copy brief</button></div></div>`;
+        announce("AI queue brief ready");
+        const cb=$("#copybrief");if(cb)cb.addEventListener("click",async()=>{await navigator.clipboard.writeText(d.brief||"");toast("Brief copied");});
+      }catch(e){
+        bo.innerHTML=`<div class="notice reveal">The AI queue brief needs the AI backend (set <span class="mono">NVIDIA_API_KEY</span> in Vercel). Your sequenced queue below works without it.</div>`;
+      }
+      bf.removeAttribute("aria-busy");
+      bf.innerHTML=`<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-spark"/></svg>AI queue brief`;
     });
-    const base=triageBase();
-    results.querySelectorAll(".reply").forEach(b=>b.addEventListener("click",async()=>{
-      const t=state.tickets.find(x=>x.id===b.dataset.id);
-      await navigator.clipboard.writeText(firstResponse(t,base));
-      b.textContent="Copied reply"; setTimeout(()=>b.textContent="Copy first response",1400);
+    results.querySelectorAll(".reply").forEach(b=>b.addEventListener("click",()=>{
+      const t=state.tickets.find(x=>x.id===b.dataset.id);if(t)openReply(t);
     }));
     results.querySelectorAll(".airecheck").forEach(b=>b.addEventListener("click",async()=>{
-      const t=state.tickets.find(x=>x.id===b.dataset.id); if(!t)return;
-      b.textContent="Asking AI…";
+      const t=state.tickets.find(x=>x.id===b.dataset.id);if(!t)return;
+      b.setAttribute("aria-busy","true");
+      b.innerHTML=`<span class="spin" aria-hidden="true"></span>Asking AI…`;
       try{
         const r=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({input:t.raw_message,model:($("#aimodel")?.value||"flash")})});
-        if(!r.ok) throw 0; const d=await r.json();
+        if(!r.ok)throw 0;const d=await r.json();
         t.category=d.category||t.category;
         t.priority=["High","Medium","Low"].includes(d.priority)?d.priority:t.priority;
         t.first_step=d.first_step||t.first_step;
-        t.team=ROUTING[t.category]||ROUTING.General; t.ai=true;
-        /* Feature 5: capture model and time on re-check */
-        t.aimodel=aiModelLabel(); t.aitime=new Date().toLocaleString('en-GB');
+        t.team=ROUTING[t.category]||ROUTING.General;t.ai=true;
+        t.aimodel=aiModelLabel();t.aitime=new Date().toLocaleString("en-GB");
         state.tickets.sort((a,c)=>ORDER[a.priority]-ORDER[c.priority]);
-        results.innerHTML=resultsHTML(); wireResults();
-      }catch(e){ b.textContent="AI not enabled"; }
+        results.innerHTML=resultsHTML();wireResults();
+        announce(`Ticket ${t.id} re-checked: now ${t.category}, priority ${t.priority}`);
+      }catch(e){
+        b.removeAttribute("aria-busy");
+        b.innerHTML="AI not enabled";
+      }
     }));
   }
 }
 
-/* ---- export view ---- */
+/* ════════ export view ════════ */
 function csvText(){
   const base=triageBase();
   const head=["Ticket ID","Category","Priority","Team","SLA (h)","SLA breach","Summary","First step"];
-  const esc=v=>`"${String(v).replace(/"/g,'""')}"`;
-  const rows=state.tickets.map(t=>[t.id,t.category,t.priority,t.team,SLA_HOURS[t.priority],breachText(base,SLA_HOURS[t.priority]),t.summary,t.first_step].map(esc).join(","));
-  return [head.map(esc).join(","),...rows].join("\n");
+  const q=v=>`"${String(v).replace(/"/g,'""')}"`;
+  const rows=state.tickets.map(t=>[t.id,t.category,t.priority,t.team,SLA_HOURS[t.priority],breachText(base,SLA_HOURS[t.priority]),t.summary,t.first_step].map(q).join(","));
+  return [head.map(q).join(","),...rows].join("\n");
 }
 function exportView(){
-  if(!state.tickets.length){main.innerHTML=`<div class="view enter"><div class="empty"><h3>Nothing to export yet.</h3><p>Triage an inbox first, then come back to download it as CSV for Jira, ServiceNow or a spreadsheet.</p></div></div>`;return;}
+  if(!state.tickets.length){
+    main.innerHTML=`<div class="view reveal">
+      <div class="viewhead"><h2 data-viewtitle>Export manifest</h2></div>
+      <div class="empty"><svg class="radar" viewBox="0 0 150 150" role="img" aria-label="Radar screen, nothing to export"><circle class="grid" cx="75" cy="75" r="70"/><circle class="grid" cx="75" cy="75" r="46"/><circle class="grid" cx="75" cy="75" r="22"/><line class="grid" x1="75" y1="5" x2="75" y2="145"/><line class="grid" x1="5" y1="75" x2="145" y2="75"/><line class="sweepline" x1="75" y1="75" x2="75" y2="5"/></svg>
+      <div><h3>Nothing to export yet</h3><p>Sequence an inbox first, then come back to download the queue as CSV for Jira, ServiceNow or a spreadsheet.</p><div class="cta"><button class="btn btn-primary" id="gotriage">Go to triage</button></div></div></div></div>`;
+    $("#gotriage").addEventListener("click",()=>setView("triage"));
+    return;
+  }
   const csv=csvText();
-  main.innerHTML=`<div class="view enter">
-    <div class="barrow"><span class="leadlabel" style="margin:0">CSV export · ${state.tickets.length} tickets</span>
-      <button class="btn btn-primary" id="dl">Download CSV</button>
-      <button class="btn btn-ghost" id="cp">Copy CSV</button></div>
-    <pre class="block" id="csvtext">${esc(csv)}</pre>
+  main.innerHTML=`<div class="view reveal">
+    <div class="viewhead"><h2 data-viewtitle>Export manifest</h2><p class="sub">${state.tickets.length} tickets · every column traces to a rule you can point at.</p></div>
+    <div class="barrow">
+      <button class="btn btn-primary" id="dl"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-export"/></svg>Download CSV</button>
+      <button class="btn btn-ghost" id="cp"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-copy"/></svg>Copy CSV</button>
+    </div>
+    <pre class="block">${esc(csv)}</pre>
   </div>`;
-  $("#dl").addEventListener("click",()=>{const blob=new Blob([csv],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="triaged-tickets.csv";a.click();URL.revokeObjectURL(a.href);});
-  $("#cp").addEventListener("click",async()=>{await navigator.clipboard.writeText(csv);$("#cp").textContent="Copied";setTimeout(()=>$("#cp").textContent="Copy CSV",1400);});
+  $("#dl").addEventListener("click",()=>{const blob=new Blob([csv],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="triaged-tickets.csv";a.click();URL.revokeObjectURL(a.href);toast("triaged-tickets.csv downloaded");});
+  $("#cp").addEventListener("click",async()=>{await navigator.clipboard.writeText(csv);toast("CSV copied");});
 }
 
-/* ---- reference view ---- */
+/* ════════ reference view ════════ */
 function referenceView(){
   const routeRows=Object.entries(ROUTING).map(([c,team])=>`<tr><td>${esc(c)}</td><td>${esc(team)}</td></tr>`).join("");
-  main.innerHTML=`<div class="view ref enter">
-    <h2>Priority rules</h2>
-    <table class="ref"><thead><tr><th>Priority</th><th>When</th><th>SLA</th></tr></thead><tbody>
-      <tr><td><span class="tag high">High</span></td><td>Trade is blocked, or many people are stuck</td><td>4 hours</td></tr>
-      <tr><td><span class="tag medium">Med</span></td><td>Recurring, or a single-person nuisance</td><td>8 hours</td></tr>
-      <tr><td><span class="tag low">Low</span></td><td>Everything else</td><td>3 days</td></tr>
+  main.innerHTML=`<div class="view ref reveal">
+    <div class="viewhead"><h2 data-viewtitle>Reference — the rulebook</h2><p class="sub">Every triage decision this board makes, written down. Change the rules when they get something wrong.</p></div>
+    <h3>Priority rules</h3>
+    <table class="ref"><thead><tr><th scope="col">Priority</th><th scope="col">When</th><th scope="col">SLA</th></tr></thead><tbody>
+      <tr><td><span class="holder high">High</span></td><td>Trade is blocked, or many people are stuck</td><td class="mono">4 hours</td></tr>
+      <tr><td><span class="holder med">Med</span></td><td>Recurring, or a single-person nuisance</td><td class="mono">8 hours</td></tr>
+      <tr><td><span class="holder low">Low</span></td><td>Everything else</td><td class="mono">3 days</td></tr>
     </tbody></table>
-    <h2>Routing by category</h2>
-    <table class="ref"><thead><tr><th>Category</th><th>Assigned team</th></tr></thead><tbody>${routeRows}</tbody></table>
-    <h2>How it decides</h2>
+    <h3>Routing by category</h3>
+    <table class="ref"><thead><tr><th scope="col">Category</th><th scope="col">Assigned team</th></tr></thead><tbody>${routeRows}</tbody></table>
+    <h3>How it decides</h3>
     <table class="ref"><tbody>
       <tr><td>Category</td><td>First matching keyword set wins; Security is checked before Account so a phishing "reset password" is not filed as a routine reset.</td></tr>
       <tr><td>Priority</td><td>High if a trade-blocking or many-people signal is present; Medium for recurring or single-user; Low otherwise.</td></tr>
-      <tr><td>Major incident</td><td>Three or more tickets in one category in a batch raises a banner.</td></tr>
+      <tr><td>Major incident</td><td>Three or more tickets in one category raises a banner; two or more in one category at one store raises a site-wide P1 banner.</td></tr>
     </tbody></table>
   </div>`;
 }
